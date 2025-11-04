@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver-abofi
+  namespace: promptsales
+  labels:
+    app: sqlserver-abofi
+    component: database
+    owner: abofi
+spec:
+  type: LoadBalancer
+  selector:
+    app: sqlserver-abofi
+    component: database
+  ports:
+  - port: 1433
+    targetPort: 1433
+    protocol: TCP
+    name: sqlserver
+  sessionAffinity: ClientIP

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver-abofi
+  namespace: promptsales
+  labels:
+    app: sqlserver-abofi
+    component: database
+    owner: abofi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver-abofi
+      component: database
+  strategy:
+    type: Recreate  # Para bases de datos
+  template:
+    metadata:
+      labels:
+        app: sqlserver-abofi
+        component: database
+        owner: abofi
+    spec:
+      containers:
+      - name: sqlserver
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - containerPort: 1433
+          name: sqlserver
+          protocol: TCP
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sqlserver-abofi-secret
+              key: SA_PASSWORD
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: MSSQL_AGENT_ENABLED
+          value: "true"
+        resources:
+          requests:
+            memory: "2Gi"    # Ajustado para uso personal
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: sqlserver-data
+          mountPath: /var/opt/mssql
+        livenessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: sqlserver-data
+        persistentVolumeClaim:
+          claimName: sqlserver-abofi-pvc
+      restartPolicy: Always
