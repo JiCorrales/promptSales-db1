@@ -1,0 +1,129 @@
+{
+  "database": "promptcontent",
+  "collections": [
+    {
+      "name": "images",
+      "schema": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["url", "hashtags"],
+          "properties": {
+            "url": { "bsonType": "string", "description": "HTTPS URL to the image" },
+            "title": { "bsonType": ["string", "null"] },
+            "description": { "bsonType": ["string", "null"] },
+            "hashtags": {
+              "bsonType": "array",
+              "minItems": 1,
+              "items": { "bsonType": "string", "pattern": "^#\\w+" }
+            },
+            "source": { "bsonType": ["string", "null"] },
+            "vectorId": { "bsonType": ["string", "null"] },
+            "embeddingProvider": { "bsonType": ["string", "null"] },
+            "createdAt": { "bsonType": ["date", "null"] },
+            "updatedAt": { "bsonType": ["date", "null"] }
+          }
+        }
+      },
+      "indexes": [
+        { "key": { "hashtags": 1 }, "name": "ix_images_hashtags" },
+        { "key": { "description": "text", "title": "text" }, "name": "tx_images_desc_title", "default_language": "spanish" },
+        { "key": { "vectorId": 1 }, "name": "ix_images_vectorId", "sparse": true }
+      ]
+    },
+    {
+      "name": "hashtags",
+      "schema": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["tag"],
+          "properties": {
+            "tag": { "bsonType": "string", "description": "lowercased unique hashtag" },
+            "category": { "bsonType": ["string", "null"] },
+            "popularityScore": { "bsonType": ["int", "long", "double"], "minimum": 0 },
+            "createdAt": { "bsonType": ["date", "null"] },
+            "updatedAt": { "bsonType": ["date", "null"] }
+          }
+        }
+      },
+      "indexes": [
+        { "key": { "tag": 1 }, "name": "ux_hashtags_tag", "unique": true }
+      ]
+    },
+    {
+      "name": "campaign_logs",
+      "schema": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["campaignId", "audience", "messages"],
+          "properties": {
+            "campaignId": { "bsonType": "string" },
+            "audience": { "bsonType": "string" },
+            "messages": {
+              "bsonType": "array",
+              "minItems": 1,
+              "items": {
+                "bsonType": "object",
+                "required": ["ts", "text", "role"],
+                "properties": {
+                  "ts": { "bsonType": "date" },
+                  "text": { "bsonType": "string" },
+                  "role": { "bsonType": "string", "enum": ["system", "assistant", "user"] }
+                }
+              }
+            },
+            "meta": { "bsonType": ["object", "null"] },
+            "createdAt": { "bsonType": ["date", "null"] },
+            "updatedAt": { "bsonType": ["date", "null"] }
+          }
+        }
+      },
+      "indexes": [
+        { "key": { "campaignId": 1 }, "name": "ix_campaign_logs_campaignId" },
+        { "key": { "audience": 1, "messages.ts": -1 }, "name": "ix_campaign_logs_audience_ts" }
+      ]
+    },
+    {
+      "name": "integrations",
+      "schema": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["name"],
+          "properties": {
+            "name": { "bsonType": "string" },
+            "baseUrl": { "bsonType": ["string", "null"] },
+            "authType": { "bsonType": ["string", "null"] },
+            "headers": { "bsonType": ["object", "null"] },
+            "createdAt": { "bsonType": ["date", "null"] },
+            "updatedAt": { "bsonType": ["date", "null"] }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "api_logs",
+      "schema": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["tool", "status"],
+          "properties": {
+            "tool": { "bsonType": "string" },
+            "request": { "bsonType": ["object", "string", "null"] },
+            "response": { "bsonType": ["object", "string", "null"] },
+            "status": { "bsonType": ["int", "long", "double"] },
+            "createdAt": { "bsonType": ["date", "null"] }
+          }
+        }
+      },
+      "indexes": [
+        { "key": { "tool": 1, "createdAt": -1 }, "name": "ix_api_logs_tool_createdAt" },
+        {
+          "key": { "createdAt": 1 },
+          "name": "ttl_api_logs_createdAt_30d",
+          "expireAfterSeconds": 2592000,
+          "enabled": false
+        }
+      ]
+    }
+  ]
+}
