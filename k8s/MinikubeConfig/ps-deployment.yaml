@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  replicas: 1  # Deja 1, no 3, para evitar conflictos en almacenamiento
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:14
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgres  # Tu ConfigMap existente con usuario, pass y DB
+          args:
+            - "-c"
+            - "listen_addresses=*"
+            - "-c"
+            - "hba_file=/etc/postgresql/pg_hba.conf"
+          volumeMounts:
+            - name: pg-hba
+              mountPath: /etc/postgresql
+              readOnly: true
+      volumes:
+        - name: pg-hba
+          configMap:
+            name: pg-hba-cm
