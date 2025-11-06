@@ -3,10 +3,12 @@ CONFIGURACION PARA DESPLEGAR LAS BASES
 Se usa la imagen de minikube en docker, es nesesario instalar "kubectl"
 
 Iniciar minikube:
-> minikube start
+> minikube start --driver=docker
 
 Primero crear el namespace:
-> kubectl create namespace mssql/postgres/mongo
+> kubectl create namespace mssql
+> kubectl create namespace postgres
+> kubectl create namespace mongo 
 
 Se pueden crear los archivos con:
 > nano nombre_archivo.yaml
