@@ -1,0 +1,29 @@
+{
+        "bsonType": "object",
+        "required": ["serverKey","name","tools","createdAt"],
+        "properties": {
+            "serverKey": { "bsonType": "string" },
+            "name": { "bsonType": "string" },
+
+            "tools": {
+            "bsonType": "array",
+            "minItems": 1,
+            "items": {
+                "bsonType": "object",
+                "required": ["toolName"],
+                "properties": {
+                "toolName": { "bsonType": "string", "enum": ["getContent","generateCampaignMessages"] },
+                "paramsSchemaJson": { "bsonType": ["string","null"], "description": "JSON schema como string (opcional)" },
+                "timeoutMS": { "bsonType": ["int","null"] }
+                }
+            }
+            },
+
+            "retryDefault": { "bsonType": ["int","null"] },
+            "backoffMSDefault": { "bsonType": ["int","null"] },
+
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}

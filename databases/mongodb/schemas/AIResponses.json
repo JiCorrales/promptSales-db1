@@ -1,0 +1,21 @@
+{
+    "$jsonSchema":{
+        "bsonType": "object",
+        "required": ["aiResponseId","aiRequestId","generatedAt","status"],
+        "properties": {
+            "aiResponseId": { "bsonType": "string" },
+            "aiRequestId": { "bsonType": "string" },
+            "generatedAt": { "bsonType": "date" },
+            "status": { "bsonType": "string", "enum": ["ok","error","partial"] },
+            "latencyMS": { "bsonType": ["int","null"] },
+            "responseBody": { "bsonType": ["object","string","null"] },
+            "outContentIds": { "bsonType": ["array","null"], "items": { "bsonType": "string" } },
+            "usageInputTokens": { "bsonType": ["int","null"] },
+            "usageOutputTokens": { "bsonType": ["int","null"] },
+            "usageTotalTokens": { "bsonType": ["int","null"] },
+            "errorCode": { "bsonType": ["string","null"] },
+            "errorMessage": { "bsonType": ["string","null"] },
+            "traceId": { "bsonType": ["string","null"] }
+        }
+    }
+}

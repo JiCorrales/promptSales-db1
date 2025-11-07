@@ -1,0 +1,32 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["requestId","requestedByUserId","intent","targets","items","status","createdAt"],
+        "properties": {
+            "requestId": { "bsonType": "string" },
+            "requestedByUserId": { "bsonType": "string" },
+            "platform": { "bsonType": ["string","null"], "enum": ["promptcontent","promptads","promptcrm","web"] },
+            "intent": { "bsonType": "string" },
+            "campaignRef": { "bsonType": ["string","null"] },
+            "targets": { "bsonType": "array", "minItems": 1, "items": { "bsonType": "string" } },
+            "items": {
+                "bsonType": "array",
+                "minItems": 1,
+                "items": {
+                "bsonType": "object",
+                "required": ["type","quantity"],
+                "properties": {
+                    "type": { "bsonType": "string", "enum": ["text","image","video","audio","script"] },
+                    "quantity": { "bsonType": "int", "minimum": 1 },
+                    "spec": { "bsonType": ["object","null"] }
+                }
+                }
+            },
+            "brief": { "bsonType": ["string","null"] },
+            "originalPayload": { "bsonType": ["object","string","null"] },
+            "status": { "bsonType": "string", "enum": ["pending","processing","completed","failed"] },
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}

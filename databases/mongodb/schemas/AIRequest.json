@@ -1,0 +1,28 @@
+{
+    "$jsonSchema":{
+        "bsonType": "object",
+        "required": ["aiRequestId","createdAt","status","prompt","modality"],
+        "properties": {
+            "aiRequestId": { "bsonType": "string" },
+            "createdAt": { "bsonType": "date" },
+            "completedAt": { "bsonType": ["date","null"] },
+            "status": { "bsonType": "string", "enum": ["pending","processing","completed","failed"] },
+            "prompt": { "bsonType": "string" },
+            "modality": { "bsonType": "string", "enum": ["text","image","video","audio","script"] },
+            "modelProvider": { "bsonType": ["string","null"] },
+            "modelName": { "bsonType": ["string","null"] },
+            "modelVersion": { "bsonType": ["string","null"] },
+            "paramTemperature": { "bsonType": ["double","null"] },
+            "paramMaxTokens": { "bsonType": ["int","null"] },
+            "requestHeaders": { "bsonType": ["object","null"] },
+            "requestBody": { "bsonType": ["object","string","null"] },
+            "responseRef": { "bsonType": ["string","null"] },
+            "byUserId": { "bsonType": ["string","null"] },
+            "byProcess": { "bsonType": ["string","null"] },
+            "campaignRef": { "bsonType": ["string","null"] },
+            "segmentKey": { "bsonType": ["string","null"] },
+            "traceId": { "bsonType": ["string","null"] }
+        }
+    }
+
+}

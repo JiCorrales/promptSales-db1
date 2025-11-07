@@ -1,0 +1,38 @@
+{
+	"servers": {
+		"MongoDB": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"mongodb-mcp-server"
+			],
+			"env": {
+				"MONGODB_URI": "mongodb://localhost:27017",
+				"MONGODB_DB_NAME": "promptcontent_dev"
+			}
+		},
+		"PromptContent": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"mcp-servers/promptcontent/src/server.js"
+			],
+			"env": {
+				"PC_DEFAULT_CHANNELS": "instagram,tiktok,facebook",
+				"PC_HASHTAG_COUNT": "10",
+				"PC_MOODBOARD_MAX": "5",
+				"PC_KEYWORD_MAX": "6",
+				"PC_MESSAGE_TEMPLATES": "[{\"stage\":\"Descubrimiento\",\"pattern\":\"Hola {{audience}}, notamos que {{pain}}. {{campaignDescription}}\"},{\"stage\":\"Consideracion\",\"pattern\":\"Imagina {{audience}} alcanzando {{motivation}} con nuestra oferta.\"},{\"stage\":\"Conversion\",\"pattern\":\"{{cta}}: visita {{channel}} para aprovechar el beneficio.\"}]",
+				"MONGODB_URI": "mongodb://localhost:27017",
+				"MONGODB_DB_NAME": "promptcontent_dev",
+				"PC_CONTENT_REQUESTS_COLLECTION": "ContentRequests",
+				"PC_CAMPAIGN_LOGS_COLLECTION": "CampaignLogs",
+				"PGVECTOR_DSN": "postgres://postgres:postgres@localhost:5432/promptcontent",
+				"PGVECTOR_TABLE": "content_embeddings",
+				"PGVECTOR_DIM": "128"
+			}
+		}
+	},
+	"inputs": []
+}

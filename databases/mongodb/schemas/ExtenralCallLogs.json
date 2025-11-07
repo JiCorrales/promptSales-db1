@@ -1,0 +1,43 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["logId", "serviceKey", "endpointKey", "method", "statusCode", "timestamp"],
+    "properties": {
+      "logId": { "bsonType": "string" },
+      "serviceKey": { "bsonType": "string" },
+      "endpointKey": { "bsonType": "string" },
+      "variantKey": { "bsonType": ["string", "null"] },
+
+      "method": { "bsonType": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+
+      "requestHeaders": { "bsonType": ["object", "null"], "description": "sin datos sensibles" },
+      "requestBody": { "bsonType": ["object", "string", "null"] },
+      "requestQuery": { "bsonType": ["object", "null"] },
+
+      "responseHeaders": { "bsonType": ["object", "null"] },
+      "responseBody": { "bsonType": ["object", "string", "null"] },
+
+      "statusCode": { "bsonType": "int" },
+      "statusText": { "bsonType": ["string", "null"] },
+      "durationMS": { "bsonType": ["int", "null"] },
+
+      "appName": { "bsonType": ["string", "null"] },
+      "appVersion": { "bsonType": ["string", "null"] },
+      "appProcess": { "bsonType": ["string", "null"] },
+
+      "clientUserId": { "bsonType": ["string", "null"] },
+      "clientPlatform": { "bsonType": ["string", "null"], "enum": ["promptcontent", "promptads", "promptcrm", "web", null] },
+      "clientUserAgent": { "bsonType": ["string", "null"] },
+      "clientIpHash": { "bsonType": ["string", "null"] },
+
+      "timestamp": { "bsonType": "date" },
+      "processedAt": { "bsonType": ["date", "null"] },
+
+      "errorCode": { "bsonType": ["string", "null"] },
+      "errorMessage": { "bsonType": ["string", "null"] },
+      "errorStack": { "bsonType": ["string", "null"] },
+
+      "traceId": { "bsonType": ["string", "null"] }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["contentId","type", "format","createdAt","dataKind", "clientId", "status"],
+        "properties": {
+            "contentId": { "bsonType": "string" },
+            "type": { "bsonType": "string", "enum": ["text","image","video","audio","script"] },
+
+            "title": { "bsonType": ["string","null"] },
+            "description": { "bsonType": ["string","null"] },
+            "hashtags": { "bsonType": ["array","null"], "items": { "bsonType": "string" } },
+            "lang": { "bsonType": ["string","null"] },
+            "category": { "bsonType": ["string","null"], "enum": [ "social", "ads", "email", "web", "product", "branding", "internal", "other" ] },
+
+            "dataFormat": { "bsonType": ["string"] },
+            "dataSize": { "bsonType": ["int"] },
+            "dataUrl": { "bsonType": ["string","null"] },
+            "socialPlatform": { "bsonType": ["string","null"], "enum": ["facebook","instagram","twitter","linkedin", "tiktok", "youtube"] },
+            "featureVector": { "bsonType": ["array"] },
+            "campaignRef": { "bsonType": ["string","null"] },
+            "adRef": { "bsonType": ["string","null"] },
+            "userId": { "bsonType": ["string","null"] },
+            "clientId": { "bsonType": ["string","null"] },
+
+            "aiRequestId": { "bsonType": ["string","null"] },
+            "aiResponseId": { "bsonType": ["string","null"] },
+
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] },
+            "status": { "bsonType": "string", "enum": ["draft","approved","archived"] }
+        }
+    }
+}

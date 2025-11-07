@@ -1,0 +1,25 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["clientKey","serverKey","tools","createdAt"],
+        "properties": {
+            "clientKey": { "bsonType": "string" },
+            "serverKey": { "bsonType": "string" },
+
+            "tools": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "object",
+                "required": ["tool"],
+                "properties": {
+                "tool": { "bsonType": "string", "enum": ["getContent","generateCampaignMessages"] },
+                "defaultParamsJson": { "bsonType": ["string","null"], "description": "JSON como string" }
+                }
+            }
+            },
+
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}

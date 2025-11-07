@@ -1,0 +1,48 @@
+{
+    "$jsonSchema":{
+        "bsonType": "object",
+        "required": ["planId","name","targets","items","createdAt"],
+        "properties": {
+            "planId": { "bsonType": "string" },
+            "name": { "bsonType": "string" },
+            "campaignRef": { "bsonType": ["string","null"] },
+
+            "targets": {
+            "bsonType": "array",
+            "minItems": 1,
+            "items": {
+                "bsonType": "object",
+                "required": ["segmentKey"],
+                "properties": {
+                "segmentKey": { "bsonType": "string" },
+                "notes": { "bsonType": ["string","null"] }
+                }
+            }
+            },
+
+            "items": {
+            "bsonType": "array",
+            "minItems": 1,
+            "items": {
+                "bsonType": "object",
+                "required": ["type","quantity"],
+                "properties": {
+                "type": { "bsonType": "string", "enum": ["text","image","video","audio","script","carousel","story"] },
+                "quantity": { "bsonType": "int", "minimum": 1 },
+                "size": { "bsonType": ["string","null"] },
+                "format": { "bsonType": ["string","null"] },
+                "durationMS": { "bsonType": ["int","null"] },
+                "style": { "bsonType": ["string","null"] },
+                "voice": { "bsonType": ["string","null"] },
+                "animation": { "bsonType": ["string","null"] },
+                "constraintsJson": { "bsonType": ["string","null"] }
+                }
+            }
+            },
+
+            "status": { "bsonType": "string", "enum": ["draft","active","archived"] },
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}

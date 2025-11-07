@@ -1,0 +1,32 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["providerKey","name","createdAt"],
+        "properties": {
+            "providerKey": { "bsonType": "string" },
+            "name": { "bsonType": "string" },
+            "kind": { "bsonType": "string", "enum": ["external","finetuned","internal"] },
+            "models": {
+            "bsonType": ["array","null"],
+            "items": {
+                "bsonType": "object",
+                "required": ["modelName","tasks"],
+                "properties": {
+                "modelName": { "bsonType": "string" },
+                "version": { "bsonType": ["string","null"] },
+                "tasks": { "bsonType": "array", "items": { "bsonType": "string" } },
+                "defaultParams": {
+                    "bsonType": ["object","null"],
+                    "properties": {
+                    "temperature": { "bsonType": ["double","null"] },
+                    "maxTokens": { "bsonType": ["int","null"] }
+                    }
+                }
+                }
+            }
+            },
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}

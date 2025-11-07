@@ -1,0 +1,16 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["userId","email","name","role","createdAt","status"],
+        "properties": {
+            "userId": { "bsonType": "string" },
+            "email": { "bsonType": "string" },
+            "name": { "bsonType": "string" },
+            "role": { "bsonType": "string", "enum": ["admin","marketer","agent","client"] },
+            "platform": { "bsonType": ["string","null"], "enum": ["promptcontent","promptads","promptcrm","web"] },
+            "createdAt": { "bsonType": "date" },
+            "lastLogin": { "bsonType": ["date","null"] },
+            "status": { "bsonType": "string", "enum": ["active","inactive","suspended"] }
+        }
+    }
+}

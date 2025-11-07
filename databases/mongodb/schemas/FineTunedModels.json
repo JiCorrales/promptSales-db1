@@ -1,0 +1,24 @@
+{
+    "$jsonSchema":{
+        "bsonType": "object",
+        "required": ["fineTuneId","baseProviderKey","baseModelName","createdAt","hostingProviderKey","hostingModelName"],
+        "properties": {
+            "fineTuneId": { "bsonType": "string" },
+
+            "baseProviderKey": { "bsonType": "string" },
+            "baseModelName": { "bsonType": "string" },
+            "versionTag": { "bsonType": ["string","null"] },
+            "trainingRef": { "bsonType": ["string","null"] },
+
+            "hostingProviderKey": { "bsonType": "string" },
+            "hostingModelName": { "bsonType": "string" },
+            "endpointAlias": { "bsonType": ["string","null"] },
+
+            "notes": { "bsonType": ["string","null"] },
+            "status": { "bsonType": ["string","null"], "enum": ["draft","active","retired"] },
+
+            "createdAt": { "bsonType": "date" },
+            "updatedAt": { "bsonType": ["date","null"] }
+        }
+    }
+}
