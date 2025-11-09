@@ -1,4 +1,4 @@
-CONFIGURACION PARA DESPLEGAR LAS BASES 
+CONFIGURACION PARA DESPLEGAR LAS BASES
 
 Se usa la imagen de minikube en docker, es nesesario instalar "kubectl"
 
@@ -18,11 +18,10 @@ Aplicar los archivos:
 
 Para las conexiones:
 
-| Motor          | Host             | Puerto | Usuario    | Contraseña       | 
-| -------------- | ---------------- | ------ | ---------- | ---------------- | 
-| **Postgres**   | `localhost`      | 5432   | `User`     | *(la tuya)*      | 
-| **SQL Server** | `127.0.0.1,1433` | 1433   | `sa`       | *(de tu secret)* | 
+| Motor          | Host             | Puerto | Usuario    | Contraseña       |
+| -------------- | ---------------- | ------ | ---------- | ---------------- |
+| **Postgres**   | `localhost`      | 5432   | `User`     | *(la tuya)*      |
+| **SQL Server** | `127.0.0.1,1433` | 1433   | `sa`       | *(de tu secret)* |
 
 Para que funcionen los servicios LoadBalancer tiene que estar corriendo:
 > minikube tunnel
-
