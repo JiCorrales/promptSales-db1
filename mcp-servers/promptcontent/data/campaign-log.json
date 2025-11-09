@@ -1,0 +1,194 @@
+[
+  {
+    "id": "log-5nv78wuxs4",
+    "createdAt": "2025-11-06T22:33:59.571Z",
+    "campaignName": "Lanzamiento Agua Nova",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Atletas urbanos",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Atletas urbanos, sabemos que bebidas demasiado artificiales. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Atletas urbanos logrando mantenerse activos sin azucares con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita tiktok y asegura el beneficio.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Profesionales wellness",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Profesionales wellness, sabemos que fatiga por exceso de cafe. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Profesionales wellness logrando productividad sostenible con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita email y asegura el beneficio.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "log-9rmx9azc6e",
+    "createdAt": "2025-11-07T02:22:47.647Z",
+    "campaignName": "Lanzamiento Agua Nova",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Atletas urbanos",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Atletas urbanos, sabemos que bebidas demasiado artificiales. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Atletas urbanos logrando mantenerse activos sin azucares con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita tiktok y asegura el beneficio.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Profesionales wellness",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Profesionales wellness, sabemos que fatiga por exceso de cafe. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Profesionales wellness logrando productividad sostenible con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita email y asegura el beneficio.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "log-hhd5fwkmx8",
+    "createdAt": "2025-11-07T02:28:44.695Z",
+    "campaignName": "Carga 19",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Segmento A",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Segmento A, sabemos que buscas soluciones mas humanas. Test de estabilidad bajo carga generando bitacoras y horarios..",
+            "suggestedChannels": [
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Segmento A logrando un estilo de vida equilibrado con nuestra propuesta principal.",
+            "suggestedChannels": [
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Segmento B",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Segmento B, sabemos que buscas soluciones mas humanas. Test de estabilidad bajo carga generando bitacoras y horarios..",
+            "suggestedChannels": [
+              "email"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Segmento B logrando un estilo de vida equilibrado con nuestra propuesta principal.",
+            "suggestedChannels": [
+              "email"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita email y asegura el beneficio.",
+            "suggestedChannels": [
+              "email"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

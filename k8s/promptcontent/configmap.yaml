@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promptcontent-config
+  namespace: promptcontent-dev
+  labels:
+    app: promptcontent
+data:
+  # Ajusta canales por defecto para desarrollo
+  PC_DEFAULT_CHANNELS: "instagram,tiktok"
+  PC_HASHTAG_COUNT: "10"
+  PC_MOODBOARD_MAX: "5"
+  PC_KEYWORD_MAX: "6"
+  # Plantillas de mensajes (JSON compacto opcional)
+  PC_MESSAGE_TEMPLATES: |
+    {
+      "Descubrimiento": "Conoce {name}: {offer}",
+      "Consideracion": "Beneficios clave para {name}",
+      "Conversion": "Actua ahora: {cta}"
+    }
+

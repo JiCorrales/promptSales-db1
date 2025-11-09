@@ -1,0 +1,26 @@
+{
+  "name": "promptcontent",
+  "version": "1.0.0",
+  "description": "PromptContent MCP server exposing creative assets and campaign diaries",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "lint": "echo \"No linters configured\"",
+    "smoke": "node scripts/smoke-test.js",
+    "precision": "node scripts/precision-test.js",
+    "perf": "node scripts/perf-test.js",
+    "load": "node scripts/load-test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "nanoid": "^5.1.6",
+    "zod": "^3.25.76",
+    "mongodb": "^6.9.0",
+    "pg": "^8.11.3"
+  }
+}

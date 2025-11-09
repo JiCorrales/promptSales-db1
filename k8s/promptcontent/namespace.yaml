@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promptcontent-dev
+  labels:
+    project: promptSales
+    env: dev
+

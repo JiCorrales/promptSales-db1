@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev || npm install --omit=dev
+
+# Copy source
+COPY src ./src
+COPY data ./data
+
+# Environment
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Expose health port
+EXPOSE 8080
+
+# Start MCP server (stdio-based) with HTTP health endpoints
+CMD ["node", "src/server.js"]
+

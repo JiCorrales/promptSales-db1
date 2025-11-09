@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: promptcontent-svc
+  namespace: promptcontent-dev
+  labels:
+    app: promptcontent
+spec:
+  type: ClusterIP
+  selector:
+    app: promptcontent
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+

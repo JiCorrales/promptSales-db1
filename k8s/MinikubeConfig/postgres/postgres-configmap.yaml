@@ -2,11 +2,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres
+  namespace: promptcontent-dev
   labels:
     app: postgres
 data:
-  POSTGRES_DB: PromptSales
-  POSTGRES_USER: User
+  POSTGRES_DB: promptcontent
+  POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
 
 

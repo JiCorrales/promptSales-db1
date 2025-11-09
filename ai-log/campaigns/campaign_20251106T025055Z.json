@@ -1,0 +1,62 @@
+{
+  "timestamp": "20251106T025055Z",
+  "campaign_description": "Campaña urbana para runners",
+  "target_audiences": [
+    "runners",
+    "office workers"
+  ],
+  "context_top_k": 3,
+  "context_samples": [
+    {
+      "id": "img-109",
+      "title": "Smartwatch Runner Edition",
+      "url": "https://images.unsplash.com/photo-1511735111819-9a3f7709049c",
+      "description": "GPS smartwatch with heart-rate zones and training plans for runners.",
+      "hashtags": [
+        "#smartwatch",
+        "#running",
+        "#health",
+        "#training"
+      ],
+      "similarity": 0.1508
+    },
+    {
+      "id": "img-103",
+      "title": "Cold Brew Coffee Bottles",
+      "url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+      "description": "Ready-to-drink cold brew coffee, smooth and low acidity for busy mornings.",
+      "hashtags": [
+        "#coffee",
+        "#coldbrew",
+        "#productivity",
+        "#morning"
+      ],
+      "similarity": 0.0
+    },
+    {
+      "id": "img-102",
+      "title": "Trail Backpack 25L",
+      "url": "https://images.unsplash.com/photo-1514477917009-389c76a86b68",
+      "description": "Durable 25L backpack for trail hikes, with hydration sleeve and ventilated back.",
+      "hashtags": [
+        "#outdoors",
+        "#hiking",
+        "#backpack",
+        "#adventure"
+      ],
+      "similarity": 0.0
+    }
+  ],
+  "messages": {
+    "runners": [
+      "Campaña urbana para runners — pensado para runners. #smartwatch #running #coffee",
+      "Descubre: Smartwatch Runner Edition, Cold Brew Coffee Bottles. Ideal para runners. #running #coffee #coldbrew",
+      "runners: no te pierdas esta campaña. Inspírate con #smartwatch #running"
+    ],
+    "office workers": [
+      "Campaña urbana para runners — pensado para office workers. #smartwatch #running #coffee",
+      "Descubre: Smartwatch Runner Edition, Cold Brew Coffee Bottles. Ideal para office workers. #running #coffee #coldbrew",
+      "office workers: no te pierdas esta campaña. Inspírate con #smartwatch #running"
+    ]
+  }
+}
