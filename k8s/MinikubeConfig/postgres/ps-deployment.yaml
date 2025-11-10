@@ -6,7 +6,7 @@ metadata:
   labels:
     app: postgres
 spec:
-  replicas: 1  # Deja 1, no 3, para evitar conflictos en almacenamiento
+  replicas: 1
   selector:
     matchLabels:
       app: postgres
@@ -24,10 +24,16 @@ spec:
           envFrom:
             - configMapRef:
                 name: postgres  # Tu ConfigMap existente con usuario, pass y DB
+          args:
+            - "-c"
+            - "listen_addresses=*"
+            - "-c"
+            - "hba_file=/etc/postgresql/pg_hba.conf"
           volumeMounts:
-            - name: pgdata
-              mountPath: /var/lib/postgresql/data
+            - name: pg-hba
+              mountPath: /etc/postgresql
+              readOnly: true
       volumes:
-        - name: pgdata
-          persistentVolumeClaim:
-            claimName: postgres-volume-claim
+        - name: pg-hba
+          configMap:
+            name: pg-hba-cm
