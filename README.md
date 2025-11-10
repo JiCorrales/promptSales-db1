@@ -8,12 +8,12 @@ Este README resume los pasos que cada integrante del equipo debe seguir para **l
 
 ## 1. Prerrequisitos comunes
 
-- Windows 11 con **Hyper-V** habilitado (o Docker Desktop si prefieres el driver `docker`).
+- Windows 11 con **Hyper-V** habilitado.
 - **VPN corporativa** (Radmin u otra) conectada *antes* de iniciar Minikube para que el nodo quede en la misma red que el resto del equipo.
 - Herramientas instaladas:
   - [Minikube ≥ v1.37](https://minikube.sigs.k8s.io/docs/start/)
   - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-  - Docker Desktop (solo para construir imágenes locales, aunque usaremos `minikube image build`).
+  - Registro de contenedores (GHCR recomendado) para recibir imágenes publicadas por CI/CD.
 - Repositorio clonado:
   ```powershell
   git clone <repo-url> && cd promptSales-db1
@@ -40,10 +40,9 @@ Si el equipo entra en suspensión y el nodo cambia de IP, la forma más sencilla
 
 ## 3. Servidor PromptContent
 
-1. **Construir la imagen dentro del clúster** (no requiere push a un registry):
-   ```powershell
-   minikube image build -t promptcontent:local .\mcp-servers\promptcontent
-   ```
+1. **Imagen desde GHCR vía CI/CD** (sin Docker local):
+   - El pipeline `.github/workflows/promptcontent.yml` construye con Buildah y publica en `ghcr.io/<org>/promptcontent:<sha>`.
+   - El Deployment apunta a GHCR y `imagePullPolicy: Always`; puedes fijar una etiqueta específica con `kubectl set image` si necesitas probar una versión.
 2. **Recursos base** (namespace, ConfigMap y Secret) – todos los miembros deben ejecutarlos igual:
    ```powershell
    kubectl apply -f k8s/promptcontent/namespace.yaml
@@ -186,7 +185,7 @@ El túnel permanece abierto mientras la terminal siga activa.
 
 ## 7. Próximos pasos
 
-- Automatizar despliegues con el workflow `.github/workflows/promptcontent.yml` agregando `KUBE_CONFIG` y credenciales de registro si publican imágenes en GHCR/Docker Hub.
+- Automatizar despliegues con el workflow `.github/workflows/promptcontent.yml` agregando `KUBE_CONFIG` y credenciales de registro si publican imágenes en GHCR u otro registro compatible.
 - Completar los manifests pendientes bajo `k8s/sqlserver/` y `k8s/mongodb/` para cada microservicio MCP adicional (PromptAds, PromptCrm).
 - Documentar los datos de prueba (`databases/**/schemas/*.json`) para que el equipo pueda poblar sus motores de forma consistente.
 

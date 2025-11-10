@@ -7,17 +7,16 @@ Este directorio contiene los manifests y pipeline para desplegar el servidor MCP
 - `kubectl` configurado contra el cluster
 - En Minikube: habilitar `metrics-server` para HPA
   - `minikube addons enable metrics-server`
-- Registro de contenedores (GHCR recomendado) o `minikube docker-env` para build local
+- Registro de contenedores (GHCR recomendado) accesible desde el cluster
 
 ## Opciones de ambiente
 - Local (Minikube):
   - CPU/RAM mínimas: `--cpus=2 --memory=2g --disk-size=20g`
-  - Build local: `& minikube -p minikube docker-env | Invoke-Expression` (PowerShell)
-  - `docker build -t promptcontent:local mcp-servers/promptcontent`
-  - Edita `deployment.yaml` y cambia la imagen a `promptcontent:local`
+  - Las imágenes se obtienen desde GHCR; no se requiere Docker local.
+  - Usa `kubectl apply -f ./k8s/` y verifica probes con `/readyz`.
 - Cluster compartido (VPN):
   - Al menos 3 nodos (1 master, 2 workers)
-  - Sube la imagen a GHCR/Docker Hub y usa el pipeline CI/CD
+  - El pipeline CI/CD publica en GHCR con Buildah y actualiza la imagen del Deployment.
 
 ## Variables de entorno (ConfigMap/Secret)
 - `ConfigMap` (`promptcontent-config`): `PC_DEFAULT_CHANNELS`, `PC_HASHTAG_COUNT`, `PC_MOODBOARD_MAX`, `PC_KEYWORD_MAX`, `PC_MESSAGE_TEMPLATES`
@@ -26,6 +25,7 @@ Este directorio contiene los manifests y pipeline para desplegar el servidor MCP
 
 ## Despliegue en un solo comando
 - Ejecuta: `kubectl apply -f ./k8s/`
+- (CI) La imagen se construye con Buildah y se publica en `ghcr.io/<org>/promptcontent:<sha>`.
   - Crea `Namespace`, `Deployment` (2 réplicas), `Service` (ClusterIP), `HPA` y `Secrets` placeholder.
   - Para producción, hay un `Service` tipo `LoadBalancer` (`service-prod.yaml`). En Minikube: `minikube service promptcontent-svc-prod --url`.
 
@@ -69,4 +69,3 @@ Este directorio contiene los manifests y pipeline para desplegar el servidor MCP
 - `kubectl -n promptcontent-dev describe deploy/promptcontent-deploy`
 - `kubectl -n promptcontent-dev scale deploy/promptcontent-deploy --replicas=3`
 - `kubectl -n promptcontent-dev rollout restart deployment/promptcontent-deploy`
-

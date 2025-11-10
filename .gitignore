@@ -2,3 +2,4 @@ databases/sqlserver/promptads/PromptAds.mdf
 
 databases/sqlserver/promptads/PromptAds_log.ldf
 mcp-servers/promptcontent/node_modules
+local/.env

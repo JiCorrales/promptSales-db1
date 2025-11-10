@@ -11,7 +11,54 @@ Guía reproducible para que cualquier integrante del equipo levante el servidor 
 - **Herramientas CLI** instaladas en el host:
   - [Minikube ≥ v1.37](https://minikube.sigs.k8s.io/docs/start/)
   - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-  - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (solo para la build local)
+  - Registro de contenedores (GHCR recomendado) con credenciales vía CI/CD
+
+## Exponer el servicio por Radmin VPN
+
+Si necesitas que tu equipo acceda al servicio `promptcontent-svc` ejecutándose en Minikube desde la red Radmin VPN, sigue estos pasos en tu máquina anfitriona (Windows):
+
+1) Reinicia el port-forward escuchando en la interfaz de red accesible por VPN:
+
+   - Opción amplia (todas las interfaces):
+     `kubectl -n promptcontent-dev port-forward svc/promptcontent-svc 8080:8080 --address 0.0.0.0`
+
+   - Opción recomendada (solo interfaz de Radmin VPN):
+     `kubectl -n promptcontent-dev port-forward svc/promptcontent-svc 8080:8080 --address <TU_IP_RADMIN>`
+
+   Para obtener `<TU_IP_RADMIN>`, abre Radmin VPN y copia tu IP, o usa PowerShell: `Get-NetIPAddress -InterfaceAlias "Radmin VPN"`.
+
+2) Permite el puerto en el firewall de Windows (ejecuta PowerShell como administrador):
+
+   `netsh advfirewall firewall add rule name="PromptContent-8080" dir=in action=allow protocol=TCP localport=8080`
+
+3) Verifica salud local:
+
+   `Invoke-RestMethod -Method Get -Uri http://127.0.0.1:8080/readyz`
+
+   Debe devolver `status: ready`, con `mongoConnected: true` y `pgConnected: true`.
+
+4) Comparte con tus compañeros la URL por VPN:
+
+   - `http://<TU_IP_RADMIN>:8080/readyz`
+   - `http://<TU_IP_RADMIN>:8080/mcp/getContent`
+
+   Recuerda incluir el header de autorización en las llamadas MCP:
+
+   `Authorization: Bearer devlocal`
+
+   Ejemplo (PowerShell):
+
+   ```powershell
+   $body = '{"description":"Campaña de agua hidratante para deportistas","channels":["instagram","tiktok"],"moodboardCount":3}'
+   Invoke-RestMethod -Method Post -Uri http://<TU_IP_RADMIN>:8080/mcp/getContent -Headers @{ Authorization = "Bearer devlocal"; "Content-Type" = "application/json" } -Body $body
+   ```
+
+5) Solución de problemas:
+
+   - Si no responde desde otro equipo: confirma que puede hacer `ping <TU_IP_RADMIN>` y que el port-forward muestra `Forwarding from 0.0.0.0:8080 -> 8080`.
+   - Revisa que la regla de firewall esté aplicada: `netsh advfirewall firewall show rule name=PromptContent-8080`.
+   - Evita usar `NodePort` para compartir externamente en Minikube; el port-forward con `--address` es más simple y directo para VPN.
+
   - PowerShell 7+ (recomendado)
 - **Bases de datos accesibles**:
   - *MongoDB*: puede ser local o remota. Debe aceptar conexiones desde la IP del nodo Minikube (usa `host.minikube.internal` cuando sea tu propia máquina).
@@ -65,15 +112,15 @@ minikube addons enable metrics-server
 
 ---
 
-## 3. Construir la imagen dentro del cluster
+## 3. Imágenes desde GHCR (CI/CD)
 
-En la raíz del repo:
+La construcción de imágenes ya no se realiza con Docker local. El pipeline CI/CD construye con Buildah y publica en GHCR:
 
-```powershell
-minikube image build -t promptcontent:local .\mcp-servers\promptcontent
-```
+- Revisa `.github/workflows/promptcontent.yml` para ver la tarea de build/push.
+- La imagen publicada sigue el patrón `ghcr.io/<org>/promptcontent:<sha>` y `latest`.
+- El Deployment en `k8s/promptcontent/deployment.yaml` usa `imagePullPolicy: Always` y apunta a GHCR.
 
-Esto carga la imagen en el runtime `containerd` interno, de modo que no dependemos de un registro externo.
+Si necesitas probar una imagen específica, actualiza la etiqueta en el Deployment y aplica los manifests.
 
 ---
 
@@ -176,6 +223,7 @@ Mientras el comando esté activo, otros podrán usar `http://<tu-IP-VPN>:8080/re
 | `/readyz` devuelve `mongoConnected:false` | Puerto 27017 bloqueado o credenciales erróneas | Revisa firewall, usa `host.minikube.internal`/`timeout 5 bash -c 'cat </dev/null >/dev/tcp/...'` para testear |
 | HPA sin métricas (`<unknown>/60%`) | Falta `metrics-server` | `minikube addons enable metrics-server` y espera unos minutos |
 | `ImagePullBackOff` | Imagen no existe | Reconstruye con `minikube image build ...` o usa la etiqueta del registro oficial |
+| `ImagePullBackOff` | Imagen no disponible en GHCR o credenciales del cluster | Verifica que el workflow haya publicado en GHCR y que el cluster tenga acceso (si el registro es privado, configura `imagePullSecrets`) |
 
 ---
 

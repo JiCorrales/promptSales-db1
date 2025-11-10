@@ -31,6 +31,26 @@ Servidor MCP que expone dos herramientas: `getContent` y `campaignDiary`. Ambas 
 - Entrada: `campaignName`, `campaignDescription`, `objective`, `keyOffer?`, `launchWindow?`, `tone?`, `callToAction?`, `targetAudiences[{ name, profile?, motivations[], pains[], preferredChannels[] }]`
 - Salida:
   - `requestId`, `campaignName`
+
+## Endpoints HTTP adicionales
+
+### `/vectors`
+- `GET`: lista vectores (`id` opcional) o recupera uno: devuelve `{ id, description }`.
+- `POST`: crea vector con `{ id, description }` e indexa en pgvector.
+- `PUT`: actualiza `{ id, description }` y reindexa.
+- `DELETE`: elimina el vector por `id`.
+
+### `/images`
+- `GET`: lista metadatos de imágenes (`id` opcional) o recupera uno: `{ id, url, title, hashtags[], format?, size_bytes?, width?, height? }`.
+- `POST`: crea/actualiza metadatos.
+- `DELETE`: elimina por `id`.
+
+### Notas de configuración
+- Variables de entorno relevantes para pgvector: `PGVECTOR_DSN`, `PGVECTOR_TABLE`, `PGVECTOR_DIM`.
+- La tabla `images_meta` incluye columnas técnicas: `format`, `size_bytes`, `width`, `height`.
+
+### Integración externa
+- `POST /external/spotify/import`: requiere `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` en entorno. Cuerpo: `{ "q": "consulta", "limit": 20 }`. Importa portadas de álbumes como imágenes con hashtags generados y crea vectores a partir del título.
   - `diary[]` por audiencia con `messages[{ stage, copy, suggestedChannels[] }]`
   - `scheduleSuggestions[]` con `audience`, `stage`, `when` (ISO), `channels[]`
   - `tracking` con `trackingId`, `objective`, `audiences[]`

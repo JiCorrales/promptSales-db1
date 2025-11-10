@@ -190,5 +190,77 @@
         ]
       }
     ]
+  },
+  {
+    "id": "log-ee9qvbywmm",
+    "createdAt": "2025-11-10T07:50:00.980Z",
+    "campaignName": "HydraPlus electrolitos naturales",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Atletas universitarios",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Atletas universitarios, sabemos que buscas soluciones mas humanas. Campa�a de agua hidratante para deportistas con electrolitos vegetales.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok",
+              "email"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Atletas universitarios logrando un estilo de vida equilibrado con 20% descuento primer compra.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok",
+              "email"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok",
+              "email"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Maratonistas aficionados",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Maratonistas aficionados, sabemos que buscas soluciones mas humanas. Campa�a de agua hidratante para deportistas con electrolitos vegetales.",
+            "suggestedChannels": [
+              "instagram",
+              "landing",
+              "email"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Maratonistas aficionados logrando un estilo de vida equilibrado con 20% descuento primer compra.",
+            "suggestedChannels": [
+              "instagram",
+              "landing",
+              "email"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "landing",
+              "email"
+            ]
+          }
+        ]
+      }
+    ]
   }
 ]

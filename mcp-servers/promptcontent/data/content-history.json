@@ -528,5 +528,42 @@
       ],
       "ideaCount": 3
     }
+  },
+  {
+    "id": "pc-sfryzqh5ck",
+    "createdAt": "2025-11-10T07:49:27.022Z",
+    "request": {
+      "description": "Campa�a de agua hidratante para deportistas con electrolitos naturales",
+      "campaignGoal": "engagement",
+      "tone": "aspiracional",
+      "keywords": [],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "#F97316",
+        "#1E293B",
+        "#FDE047"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "4:5",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#campa",
+        "#hidratante",
+        "#deportistas",
+        "#electrolitos",
+        "#naturales",
+        "#campaa",
+        "#de",
+        "#agua",
+        "#para",
+        "#con"
+      ],
+      "ideaCount": 3
+    }
   }
 ]

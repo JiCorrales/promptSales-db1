@@ -33,7 +33,7 @@ if ($LASTEXITCODE -eq 0) {
 
     # Iniciar Minikube con configuracion para SQL Server
     Write-Host "[2/5] Iniciando Minikube (puede tomar 2-3 minutos)..." -ForegroundColor Yellow
-    & $minikubePath start --driver=docker --memory=8192 --cpus=4
+    & $minikubePath start --driver=hyperv --hyperv-virtual-switch "Default Switch" --memory=8192 --cpus=4
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Fallo al iniciar Minikube" -ForegroundColor Red

@@ -1,9 +1,9 @@
 CONFIGURACION PARA DESPLEGAR LAS BASES
 
-Se usa la imagen de minikube en docker, es nesesario instalar "kubectl"
+Se usa Minikube con driver Hyper-V; es necesario instalar "kubectl".
 
 Iniciar minikube:
-> minikube start --driver=docker
+> minikube start --driver=hyperv --hyperv-virtual-switch "Default Switch"
 
 Primero crear el namespace:
 > kubectl create namespace mssql

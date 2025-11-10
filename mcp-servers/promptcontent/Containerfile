@@ -20,4 +20,3 @@ EXPOSE 8080
 
 # Start MCP server (stdio-based) with HTTP health endpoints
 CMD ["node", "src/server.js"]
-
