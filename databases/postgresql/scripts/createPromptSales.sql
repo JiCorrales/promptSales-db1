@@ -3,7 +3,8 @@
 
 
 
-CREATE TABLE IF NOT EXISTS prompt_sales."User"
+
+CREATE TABLE IF NOT EXISTS public."User"
 (
     id integer NOT NULL,
     "userNationalId" integer NOT NULL,
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."User"
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."UserPermissions"
+CREATE TABLE IF NOT EXISTS public."UserPermissions"
 (
     "permissionId" integer NOT NULL,
     "userId" integer NOT NULL,
@@ -29,7 +30,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."UserPermissions"
     PRIMARY KEY ("permissionId", "userId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Permissions"
+CREATE TABLE IF NOT EXISTS public."Permissions"
 (
     "permissionId" integer NOT NULL,
     "permissionCode" character varying(16) NOT NULL,
@@ -41,14 +42,14 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Permissions"
     PRIMARY KEY ("permissionId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Modules"
+CREATE TABLE IF NOT EXISTS public."Modules"
 (
     "moduleId" integer NOT NULL,
     "moduleName" character varying(40) NOT NULL,
     PRIMARY KEY ("moduleId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Applications"
+CREATE TABLE IF NOT EXISTS public."Applications"
 (
     "AppId" integer NOT NULL,
     "appName" character varying(40) NOT NULL,
@@ -57,7 +58,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Applications"
     PRIMARY KEY ("AppId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Companies"
+CREATE TABLE IF NOT EXISTS public."Companies"
 (
     "companyId" integer NOT NULL,
     legalld integer NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Companies"
     PRIMARY KEY ("companyId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."UserInCompany"
+CREATE TABLE IF NOT EXISTS public."UserInCompany"
 (
     "userId" integer NOT NULL,
     "companyId" integer NOT NULL,
@@ -81,7 +82,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."UserInCompany"
     PRIMARY KEY ("userId", "companyId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."PermissionsPerRole"
+CREATE TABLE IF NOT EXISTS public."PermissionsPerRole"
 (
     "roleId" integer NOT NULL,
     "permisionId" integer NOT NULL,
@@ -92,7 +93,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."PermissionsPerRole"
     PRIMARY KEY ("roleId", "permisionId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Roles"
+CREATE TABLE IF NOT EXISTS public."Roles"
 (
     "roleId" integer NOT NULL,
     "roleName" character varying(30) NOT NULL,
@@ -102,7 +103,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Roles"
     PRIMARY KEY ("roleId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."RolesPerUser"
+CREATE TABLE IF NOT EXISTS public."RolesPerUser"
 (
     "userId" integer NOT NULL,
     "roleId" integer NOT NULL,
@@ -113,7 +114,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."RolesPerUser"
     PRIMARY KEY ("userId", "roleId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."SystemLogs"
+CREATE TABLE IF NOT EXISTS public."SystemLogs"
 (
     "systemLogId" integer NOT NULL,
     description character varying(250),
@@ -127,28 +128,28 @@ CREATE TABLE IF NOT EXISTS prompt_sales."SystemLogs"
     PRIMARY KEY ("systemLogId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."LogLevels"
+CREATE TABLE IF NOT EXISTS public."LogLevels"
 (
     "logLevelId" integer NOT NULL,
     name character varying(30) NOT NULL,
     PRIMARY KEY ("logLevelId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."logSources"
+CREATE TABLE IF NOT EXISTS public."logSources"
 (
     "logSourceId" integer NOT NULL,
     name character varying(30) NOT NULL,
     PRIMARY KEY ("logSourceId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."SystemLogTypes"
+CREATE TABLE IF NOT EXISTS public."SystemLogTypes"
 (
     "systemLogTypeId" integer NOT NULL,
     name character varying(30) NOT NULL,
     PRIMARY KEY ("systemLogTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Subscription"
+CREATE TABLE IF NOT EXISTS public."Subscription"
 (
     "subId" integer NOT NULL,
     "subName" character varying(45) NOT NULL,
@@ -162,7 +163,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Subscription"
     UNIQUE ("billingId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Features"
+CREATE TABLE IF NOT EXISTS public."Features"
 (
     "featureId" integer NOT NULL,
     "featureTypeId" integer NOT NULL,
@@ -174,7 +175,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Features"
     PRIMARY KEY ("featureId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."featuresPerSub"
+CREATE TABLE IF NOT EXISTS public."featuresPerSub"
 (
     "subId" integer NOT NULL,
     "featureId" integer NOT NULL,
@@ -185,7 +186,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."featuresPerSub"
     PRIMARY KEY ("subId", "featureId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."subsPerUser"
+CREATE TABLE IF NOT EXISTS public."subsPerUser"
 (
     "subId" integer NOT NULL,
     "userId" integer NOT NULL,
@@ -195,7 +196,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."subsPerUser"
     PRIMARY KEY ("subId", "userId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."featureType"
+CREATE TABLE IF NOT EXISTS public."featureType"
 (
     "featureTypeId" integer NOT NULL,
     name character varying(30) NOT NULL,
@@ -203,7 +204,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."featureType"
     PRIMARY KEY ("featureTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Payments"
+CREATE TABLE IF NOT EXISTS public."Payments"
 (
     "paymentId" integer NOT NULL,
     amount numeric(12, 2) NOT NULL,
@@ -219,21 +220,21 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Payments"
     PRIMARY KEY ("paymentId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."PaymentTypes"
+CREATE TABLE IF NOT EXISTS public."PaymentTypes"
 (
     "paymentTypeId" integer NOT NULL,
     name character varying(30),
     PRIMARY KEY ("paymentTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."paymentMethod"
+CREATE TABLE IF NOT EXISTS public."paymentMethod"
 (
     "paymentMetId" integer NOT NULL,
     name character varying(30),
     PRIMARY KEY ("paymentMetId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Currency"
+CREATE TABLE IF NOT EXISTS public."Currency"
 (
     "currencyId" integer NOT NULL,
     name character varying(30) NOT NULL,
@@ -243,7 +244,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Currency"
     PRIMARY KEY ("currencyId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ExchangeRate"
+CREATE TABLE IF NOT EXISTS public."ExchangeRate"
 (
     "exchangeRateId" integer NOT NULL,
     "startDate" timestamp without time zone NOT NULL,
@@ -256,18 +257,18 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ExchangeRate"
     UNIQUE ("toCurrency")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Country"
+CREATE TABLE IF NOT EXISTS public."Country"
 (
     "countryId" integer NOT NULL,
     name character varying(30),
     PRIMARY KEY ("countryId")
 );
 
-COMMENT ON TABLE prompt_sales."Country"
+COMMENT ON TABLE public."Country"
     IS 'Se ocupa todo el patron de direcciones?
 o solo como se ocupa el país está bien';
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Campaigns"
+CREATE TABLE IF NOT EXISTS public."Campaigns"
 (
     "campaignId" integer NOT NULL,
     "companyId" integer NOT NULL,
@@ -285,7 +286,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Campaigns"
     PRIMARY KEY ("campaignId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ContactMethods"
+CREATE TABLE IF NOT EXISTS public."ContactMethods"
 (
     "contactMethodId" integer NOT NULL,
     value character varying(100) NOT NULL,
@@ -298,14 +299,14 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ContactMethods"
     UNIQUE ("contactTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ContactMethodTypes"
+CREATE TABLE IF NOT EXISTS public."ContactMethodTypes"
 (
     "TypeId" integer NOT NULL,
     name character varying(30) NOT NULL,
     PRIMARY KEY ("TypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."contactCompany"
+CREATE TABLE IF NOT EXISTS public."contactCompany"
 (
     "companyId" integer NOT NULL,
     "contactMehodId" integer NOT NULL,
@@ -316,7 +317,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."contactCompany"
     PRIMARY KEY ("companyId", "contactMehodId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."UserContact"
+CREATE TABLE IF NOT EXISTS public."UserContact"
 (
     "UserId" integer NOT NULL,
     "contactMehodId" integer NOT NULL,
@@ -327,7 +328,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."UserContact"
     PRIMARY KEY ("contactMehodId", "UserId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Interactions"
+CREATE TABLE IF NOT EXISTS public."Interactions"
 (
     "interactionId" integer NOT NULL,
     clicks integer,
@@ -339,7 +340,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Interactions"
     PRIMARY KEY ("interactionId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Calculations"
+CREATE TABLE IF NOT EXISTS public."Calculations"
 (
     "calculoId" integer NOT NULL,
     "clickRate" numeric(6, 3),
@@ -352,7 +353,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Calculations"
     PRIMARY KEY ("calculoId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."CampaignChannels"
+CREATE TABLE IF NOT EXISTS public."CampaignChannels"
 (
     "channelId" integer NOT NULL,
     "campaignId" integer NOT NULL,
@@ -364,7 +365,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."CampaignChannels"
     PRIMARY KEY ("channelId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Leads"
+CREATE TABLE IF NOT EXISTS public."Leads"
 (
     "leadId" integer NOT NULL,
     "campaignId" integer NOT NULL,
@@ -382,7 +383,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Leads"
     UNIQUE ("countryId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."salesSummary"
+CREATE TABLE IF NOT EXISTS public."salesSummary"
 (
     "salesSumId" integer NOT NULL,
     "campaignId" integer NOT NULL,
@@ -397,7 +398,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."salesSummary"
     PRIMARY KEY ("salesSumId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."CampaignMarkets"
+CREATE TABLE IF NOT EXISTS public."CampaignMarkets"
 (
     "marketId" integer NOT NULL,
     "AddressId" integer NOT NULL,
@@ -409,7 +410,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."CampaignMarkets"
     PRIMARY KEY ("marketId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Addresses"
+CREATE TABLE IF NOT EXISTS public."Addresses"
 (
     "AddressId" integer NOT NULL,
     address1 character varying(60) NOT NULL,
@@ -424,7 +425,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Addresses"
     PRIMARY KEY ("AddressId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Cities"
+CREATE TABLE IF NOT EXISTS public."Cities"
 (
     "cityId" integer NOT NULL,
     name character varying(40) NOT NULL,
@@ -432,7 +433,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Cities"
     PRIMARY KEY ("cityId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."States"
+CREATE TABLE IF NOT EXISTS public."States"
 (
     "StateId" integer NOT NULL,
     name character varying(40) NOT NULL,
@@ -440,7 +441,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."States"
     PRIMARY KEY ("StateId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."Providers"
+CREATE TABLE IF NOT EXISTS public."Providers"
 (
     "providerId" integer NOT NULL,
     "providerTypeId" integer NOT NULL,
@@ -454,7 +455,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."Providers"
     PRIMARY KEY ("providerId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ProviderTypes"
+CREATE TABLE IF NOT EXISTS public."ProviderTypes"
 (
     "provderTypeId" integer NOT NULL,
     name character varying(40) NOT NULL,
@@ -465,7 +466,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ProviderTypes"
     PRIMARY KEY ("provderTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ProviderAPIs"
+CREATE TABLE IF NOT EXISTS public."ProviderAPIs"
 (
     "apiId" integer NOT NULL,
     "providerId" integer NOT NULL,
@@ -482,7 +483,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ProviderAPIs"
     PRIMARY KEY ("apiId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."MCPServers"
+CREATE TABLE IF NOT EXISTS public."MCPServers"
 (
     "mcpId" integer NOT NULL,
     "providerId" integer NOT NULL,
@@ -497,7 +498,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."MCPServers"
     PRIMARY KEY ("mcpId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."AuthMethods"
+CREATE TABLE IF NOT EXISTS public."AuthMethods"
 (
     "authId" integer NOT NULL,
     name character varying(30) NOT NULL,
@@ -508,7 +509,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."AuthMethods"
     PRIMARY KEY ("authId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."IntegrationCalls"
+CREATE TABLE IF NOT EXISTS public."IntegrationCalls"
 (
     "callId" integer NOT NULL,
     "companyId" integer NOT NULL,
@@ -523,7 +524,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."IntegrationCalls"
     PRIMARY KEY ("callId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."callErrors"
+CREATE TABLE IF NOT EXISTS public."callErrors"
 (
     "errorId" integer NOT NULL,
     "callId" integer NOT NULL,
@@ -535,14 +536,14 @@ CREATE TABLE IF NOT EXISTS prompt_sales."callErrors"
     PRIMARY KEY ("errorId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."CallErrorTypes"
+CREATE TABLE IF NOT EXISTS public."CallErrorTypes"
 (
     "typeId" integer NOT NULL,
     name character varying(50) NOT NULL,
     PRIMARY KEY ("typeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."CallRetryLog"
+CREATE TABLE IF NOT EXISTS public."CallRetryLog"
 (
     "retryId" integer NOT NULL,
     "callId" integer NOT NULL,
@@ -554,7 +555,7 @@ CREATE TABLE IF NOT EXISTS prompt_sales."CallRetryLog"
     PRIMARY KEY ("retryId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ETLJobs"
+CREATE TABLE IF NOT EXISTS public."ETLJobs"
 (
     "jobId" integer NOT NULL,
     name character varying(30) NOT NULL,
@@ -568,14 +569,14 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ETLJobs"
     PRIMARY KEY ("jobId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ApiTypes"
+CREATE TABLE IF NOT EXISTS public."ApiTypes"
 (
     "typeId" integer NOT NULL,
     name character varying(50) NOT NULL,
     PRIMARY KEY ("typeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."ETLDeltas"
+CREATE TABLE IF NOT EXISTS public."ETLDeltas"
 (
     "deltaId" integer NOT NULL,
     "jobId" integer NOT NULL,
@@ -590,14 +591,14 @@ CREATE TABLE IF NOT EXISTS prompt_sales."ETLDeltas"
     UNIQUE ("deltaTypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."DeltaTypes"
+CREATE TABLE IF NOT EXISTS public."DeltaTypes"
 (
     "TypeId" integer NOT NULL,
     name character varying(30) NOT NULL,
     PRIMARY KEY ("TypeId")
 );
 
-CREATE TABLE IF NOT EXISTS prompt_sales."SubBilling"
+CREATE TABLE IF NOT EXISTS public."SubBilling"
 (
     "billingId" integer NOT NULL,
     "paymentFrequency" character varying(30) NOT NULL,
@@ -608,498 +609,586 @@ CREATE TABLE IF NOT EXISTS prompt_sales."SubBilling"
     PRIMARY KEY ("billingId")
 );
 
+CREATE TABLE IF NOT EXISTS public."RawPromptAds" (
+  -- Datos de la vista 
+  campaign_id           BIGINT,
+  campaign_name         VARCHAR(200),
+  start_date            TIMESTAMPTZ,
+  end_date              TIMESTAMPTZ,
+  campaign_budget       NUMERIC(12,2),
 
-ALTER TABLE IF EXISTS prompt_sales."Permissions"
+  company_id            BIGINT,
+  company_name          VARCHAR(200),
+
+  ad_id                 BIGINT,
+  ad_name               VARCHAR(200),
+  ad_created_at         TIMESTAMPTZ,
+  ad_enabled            BOOLEAN,
+  ad_status             VARCHAR(50),
+  ad_type               VARCHAR(50),
+
+  channels              TEXT,         
+  target_markets        TEXT,         
+
+  total_impressions     BIGINT,
+  total_clicks          BIGINT,
+  total_interactions    BIGINT,
+  total_reach           BIGINT,
+  total_hours_viewed    NUMERIC(18,3),
+  total_cost            NUMERIC(14,2),
+  total_revenue         NUMERIC(14,2),
+
+  snapshot_date         DATE NOT NULL DEFAULT CURRENT_DATE, 
+  source_system         VARCHAR(30) NOT NULL DEFAULT 'PromptAds',
+  source_view           VARCHAR(128) NOT NULL DEFAULT 'dbo.vwPromptAdsSimpleSummary',
+  etl_run_id            BIGINT,
+  raw_checksum          CHAR(64),      
+  load_ts               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  raw_id                BIGSERIAL PRIMARY KEY
+);
+
+
+
+
+CREATE TABLE IF NOT EXISTS public."RawPromptCrm" (
+  lead_id                   BIGINT,
+  lead_token                VARCHAR(100),
+  created_at                TIMESTAMPTZ,
+  utm_source                VARCHAR(100),
+  utm_medium                VARCHAR(100),
+  utm_campaign              VARCHAR(150),
+  first_name                VARCHAR(120),
+  last_name                 VARCHAR(120),
+  email                     VARCHAR(200),
+  phone_number              VARCHAR(40),
+  lead_score                NUMERIC(6,2),
+  lead_status               VARCHAR(60),
+
+  subscriber_id             BIGINT,
+  subscriber_name           VARCHAR(200),
+
+  marketing_channel_id      BIGINT,
+  channel_name              VARCHAR(120),
+  channel_type_name         VARCHAR(120),
+
+  assigned_to_user_id       BIGINT,
+  assigned_user_name        VARCHAR(200),
+  assigned_at               TIMESTAMPTZ,
+  last_contacted_at         TIMESTAMPTZ,
+  next_followup_date        DATE,
+  converted_to_customer_at  TIMESTAMPTZ,
+  conversion_value          NUMERIC(14,2),
+
+  total_events              BIGINT,
+  conversion_events         BIGINT,
+  total_conversion_amount   NUMERIC(14,2),
+  last_event_at             TIMESTAMPTZ,
+
+  snapshot_date             DATE NOT NULL DEFAULT CURRENT_DATE,
+  source_system             VARCHAR(30) NOT NULL DEFAULT 'PromptCrm',
+  source_view               VARCHAR(128) NOT NULL DEFAULT 'crm.vwPromptCrmSimpleSummary',
+  etl_run_id                BIGINT,
+  raw_checksum              CHAR(64),
+  load_ts                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  raw_id                    BIGSERIAL PRIMARY KEY
+);
+
+
+
+ALTER TABLE IF EXISTS public."Permissions"
     ADD FOREIGN KEY (module)
-    REFERENCES prompt_sales."Modules" ("moduleId") MATCH SIMPLE
+    REFERENCES public."Modules" ("moduleId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."UserPermissions"
+ALTER TABLE IF EXISTS public."UserPermissions"
     ADD FOREIGN KEY ("userId")
-    REFERENCES prompt_sales."User" (id)
+    REFERENCES public."User" (id)
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
-ALTER TABLE IF EXISTS prompt_sales."UserPermissions"
+ALTER TABLE IF EXISTS public."UserPermissions"
     ADD FOREIGN KEY ("permissionId")
-    REFERENCES prompt_sales."Permissions" ("permissionId")
+    REFERENCES public."Permissions" ("permissionId")
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Applications"
+ALTER TABLE IF EXISTS public."Applications"
     ADD FOREIGN KEY ("moduleId")
-    REFERENCES prompt_sales."Modules" ("moduleId") MATCH SIMPLE
+    REFERENCES public."Modules" ("moduleId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."UserInCompany"
+ALTER TABLE IF EXISTS public."UserInCompany"
     ADD FOREIGN KEY ("companyId")
-    REFERENCES prompt_sales."Companies" ("companyId") MATCH SIMPLE
+    REFERENCES public."Companies" ("companyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."UserInCompany"
+ALTER TABLE IF EXISTS public."UserInCompany"
     ADD FOREIGN KEY ("userId")
-    REFERENCES prompt_sales."User" (id) MATCH SIMPLE
+    REFERENCES public."User" (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."PermissionsPerRole"
+ALTER TABLE IF EXISTS public."PermissionsPerRole"
     ADD FOREIGN KEY ("permisionId")
-    REFERENCES prompt_sales."Permissions" ("permissionId") MATCH SIMPLE
+    REFERENCES public."Permissions" ("permissionId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."PermissionsPerRole"
+ALTER TABLE IF EXISTS public."PermissionsPerRole"
     ADD FOREIGN KEY ("roleId")
-    REFERENCES prompt_sales."Roles" ("roleId") MATCH SIMPLE
+    REFERENCES public."Roles" ("roleId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."RolesPerUser"
+ALTER TABLE IF EXISTS public."RolesPerUser"
     ADD FOREIGN KEY ("userId")
-    REFERENCES prompt_sales."User" (id) MATCH SIMPLE
+    REFERENCES public."User" (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."RolesPerUser"
+ALTER TABLE IF EXISTS public."RolesPerUser"
     ADD FOREIGN KEY ("roleId")
-    REFERENCES prompt_sales."Roles" ("roleId") MATCH SIMPLE
+    REFERENCES public."Roles" ("roleId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."SystemLogs"
+ALTER TABLE IF EXISTS public."SystemLogs"
     ADD FOREIGN KEY ("moduleId")
-    REFERENCES prompt_sales."Modules" ("moduleId") MATCH SIMPLE
+    REFERENCES public."Modules" ("moduleId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."SystemLogs"
+ALTER TABLE IF EXISTS public."SystemLogs"
     ADD FOREIGN KEY ("systemLogTypeId")
-    REFERENCES prompt_sales."SystemLogTypes" ("systemLogTypeId") MATCH SIMPLE
+    REFERENCES public."SystemLogTypes" ("systemLogTypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."SystemLogs"
+ALTER TABLE IF EXISTS public."SystemLogs"
     ADD FOREIGN KEY ("userId")
-    REFERENCES prompt_sales."User" (id) MATCH SIMPLE
+    REFERENCES public."User" (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."SystemLogs"
+ALTER TABLE IF EXISTS public."SystemLogs"
     ADD FOREIGN KEY ("logSourceId")
-    REFERENCES prompt_sales."logSources" ("logSourceId") MATCH SIMPLE
+    REFERENCES public."logSources" ("logSourceId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."SystemLogs"
+ALTER TABLE IF EXISTS public."SystemLogs"
     ADD FOREIGN KEY ("logLevelId")
-    REFERENCES prompt_sales."LogLevels" ("logLevelId") MATCH SIMPLE
+    REFERENCES public."LogLevels" ("logLevelId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Subscription"
+ALTER TABLE IF EXISTS public."Subscription"
     ADD FOREIGN KEY ("billingId")
-    REFERENCES prompt_sales."SubBilling" ("billingId") MATCH SIMPLE
+    REFERENCES public."SubBilling" ("billingId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Features"
+ALTER TABLE IF EXISTS public."Features"
     ADD FOREIGN KEY ("featureTypeId")
-    REFERENCES prompt_sales."featureType" ("featureTypeId") MATCH SIMPLE
+    REFERENCES public."featureType" ("featureTypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."featuresPerSub"
+ALTER TABLE IF EXISTS public."featuresPerSub"
     ADD FOREIGN KEY ("subId")
-    REFERENCES prompt_sales."Subscription" ("subId") MATCH SIMPLE
+    REFERENCES public."Subscription" ("subId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."featuresPerSub"
+ALTER TABLE IF EXISTS public."featuresPerSub"
     ADD FOREIGN KEY ("featureId")
-    REFERENCES prompt_sales."Features" ("featureId") MATCH SIMPLE
+    REFERENCES public."Features" ("featureId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."subsPerUser"
+ALTER TABLE IF EXISTS public."subsPerUser"
     ADD FOREIGN KEY ("subId")
-    REFERENCES prompt_sales."Subscription" ("subId") MATCH SIMPLE
+    REFERENCES public."Subscription" ("subId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."subsPerUser"
+ALTER TABLE IF EXISTS public."subsPerUser"
     ADD FOREIGN KEY ("userId")
-    REFERENCES prompt_sales."User" (id) MATCH SIMPLE
+    REFERENCES public."User" (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Payments"
+ALTER TABLE IF EXISTS public."Payments"
     ADD FOREIGN KEY ("paymentTypeId")
-    REFERENCES prompt_sales."PaymentTypes" ("paymentTypeId") MATCH SIMPLE
+    REFERENCES public."PaymentTypes" ("paymentTypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Payments"
+ALTER TABLE IF EXISTS public."Payments"
     ADD FOREIGN KEY ("paymentMethodId")
-    REFERENCES prompt_sales."paymentMethod" ("paymentMetId") MATCH SIMPLE
+    REFERENCES public."paymentMethod" ("paymentMetId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Payments"
+ALTER TABLE IF EXISTS public."Payments"
     ADD FOREIGN KEY ("currencyId")
-    REFERENCES prompt_sales."Currency" ("currencyId") MATCH SIMPLE
+    REFERENCES public."Currency" ("currencyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Payments"
+ALTER TABLE IF EXISTS public."Payments"
     ADD FOREIGN KEY ("subId")
-    REFERENCES prompt_sales."Subscription" ("subId") MATCH SIMPLE
+    REFERENCES public."Subscription" ("subId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Payments"
+ALTER TABLE IF EXISTS public."Payments"
     ADD FOREIGN KEY ("companyId")
-    REFERENCES prompt_sales."Companies" ("companyId") MATCH SIMPLE
+    REFERENCES public."Companies" ("companyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Currency"
+ALTER TABLE IF EXISTS public."Currency"
     ADD FOREIGN KEY ("countryId")
-    REFERENCES prompt_sales."Country" ("countryId") MATCH SIMPLE
+    REFERENCES public."Country" ("countryId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ExchangeRate"
+ALTER TABLE IF EXISTS public."ExchangeRate"
     ADD FOREIGN KEY ("fromCurrency")
-    REFERENCES prompt_sales."Currency" ("currencyId") MATCH SIMPLE
+    REFERENCES public."Currency" ("currencyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ExchangeRate"
+ALTER TABLE IF EXISTS public."ExchangeRate"
     ADD FOREIGN KEY ("toCurrency")
-    REFERENCES prompt_sales."Currency" ("currencyId") MATCH SIMPLE
+    REFERENCES public."Currency" ("currencyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Campaigns"
+ALTER TABLE IF EXISTS public."Campaigns"
     ADD FOREIGN KEY ("intereractionsId")
-    REFERENCES prompt_sales."Interactions" ("interactionId") MATCH SIMPLE
+    REFERENCES public."Interactions" ("interactionId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Campaigns"
+ALTER TABLE IF EXISTS public."Campaigns"
     ADD FOREIGN KEY ("calculatiosId")
-    REFERENCES prompt_sales."Calculations" ("calculoId") MATCH SIMPLE
+    REFERENCES public."Calculations" ("calculoId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ContactMethods"
+ALTER TABLE IF EXISTS public."ContactMethods"
     ADD FOREIGN KEY ("contactTypeId")
-    REFERENCES prompt_sales."ContactMethodTypes" ("TypeId") MATCH SIMPLE
+    REFERENCES public."ContactMethodTypes" ("TypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."contactCompany"
+ALTER TABLE IF EXISTS public."contactCompany"
     ADD FOREIGN KEY ("companyId")
-    REFERENCES prompt_sales."Companies" ("companyId") MATCH SIMPLE
+    REFERENCES public."Companies" ("companyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."contactCompany"
+ALTER TABLE IF EXISTS public."contactCompany"
     ADD FOREIGN KEY ("contactMehodId")
-    REFERENCES prompt_sales."ContactMethods" ("contactMethodId") MATCH SIMPLE
+    REFERENCES public."ContactMethods" ("contactMethodId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."UserContact"
+ALTER TABLE IF EXISTS public."UserContact"
     ADD FOREIGN KEY ("UserId")
-    REFERENCES prompt_sales."User" (id) MATCH SIMPLE
+    REFERENCES public."User" (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."UserContact"
+ALTER TABLE IF EXISTS public."UserContact"
     ADD FOREIGN KEY ("contactMehodId")
-    REFERENCES prompt_sales."ContactMethods" ("contactMethodId") MATCH SIMPLE
+    REFERENCES public."ContactMethods" ("contactMethodId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."CampaignChannels"
+ALTER TABLE IF EXISTS public."CampaignChannels"
     ADD FOREIGN KEY ("campaignId")
-    REFERENCES prompt_sales."Campaigns" ("campaignId") MATCH SIMPLE
+    REFERENCES public."Campaigns" ("campaignId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Leads"
+ALTER TABLE IF EXISTS public."Leads"
     ADD FOREIGN KEY ("campaignId")
-    REFERENCES prompt_sales."Campaigns" ("campaignId") MATCH SIMPLE
+    REFERENCES public."Campaigns" ("campaignId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Leads"
+ALTER TABLE IF EXISTS public."Leads"
     ADD FOREIGN KEY ("countryId")
-    REFERENCES prompt_sales."Country" ("countryId") MATCH SIMPLE
+    REFERENCES public."Country" ("countryId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."salesSummary"
+ALTER TABLE IF EXISTS public."salesSummary"
     ADD FOREIGN KEY ("campaignId")
-    REFERENCES prompt_sales."Campaigns" ("campaignId") MATCH SIMPLE
+    REFERENCES public."Campaigns" ("campaignId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."salesSummary"
+ALTER TABLE IF EXISTS public."salesSummary"
     ADD FOREIGN KEY ("countryId")
-    REFERENCES prompt_sales."Country" ("countryId") MATCH SIMPLE
+    REFERENCES public."Country" ("countryId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."salesSummary"
+ALTER TABLE IF EXISTS public."salesSummary"
     ADD FOREIGN KEY (currencyd)
-    REFERENCES prompt_sales."Currency" ("currencyId") MATCH SIMPLE
+    REFERENCES public."Currency" ("currencyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."CampaignMarkets"
+ALTER TABLE IF EXISTS public."CampaignMarkets"
     ADD FOREIGN KEY ("AddressId")
-    REFERENCES prompt_sales."Addresses" ("AddressId") MATCH SIMPLE
+    REFERENCES public."Addresses" ("AddressId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."CampaignMarkets"
+ALTER TABLE IF EXISTS public."CampaignMarkets"
     ADD FOREIGN KEY ("campaignId")
-    REFERENCES prompt_sales."Campaigns" ("campaignId") MATCH SIMPLE
+    REFERENCES public."Campaigns" ("campaignId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Addresses"
+ALTER TABLE IF EXISTS public."Addresses"
     ADD FOREIGN KEY ("cityId")
-    REFERENCES prompt_sales."Cities" ("cityId") MATCH SIMPLE
+    REFERENCES public."Cities" ("cityId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Cities"
+ALTER TABLE IF EXISTS public."Cities"
     ADD FOREIGN KEY ("stateId")
-    REFERENCES prompt_sales."States" ("StateId") MATCH SIMPLE
+    REFERENCES public."States" ("StateId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."States"
+ALTER TABLE IF EXISTS public."States"
     ADD FOREIGN KEY ("countryId")
-    REFERENCES prompt_sales."Country" ("countryId") MATCH SIMPLE
+    REFERENCES public."Country" ("countryId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."Providers"
+ALTER TABLE IF EXISTS public."Providers"
     ADD FOREIGN KEY ("providerTypeId")
-    REFERENCES prompt_sales."ProviderTypes" ("provderTypeId") MATCH SIMPLE
+    REFERENCES public."ProviderTypes" ("provderTypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ProviderAPIs"
+ALTER TABLE IF EXISTS public."ProviderAPIs"
     ADD FOREIGN KEY ("providerId")
-    REFERENCES prompt_sales."Providers" ("providerId") MATCH SIMPLE
+    REFERENCES public."Providers" ("providerId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ProviderAPIs"
+ALTER TABLE IF EXISTS public."ProviderAPIs"
     ADD FOREIGN KEY ("authId")
-    REFERENCES prompt_sales."AuthMethods" ("authId") MATCH SIMPLE
+    REFERENCES public."AuthMethods" ("authId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ProviderAPIs"
+ALTER TABLE IF EXISTS public."ProviderAPIs"
     ADD FOREIGN KEY ("typeId")
-    REFERENCES prompt_sales."ApiTypes" ("typeId") MATCH SIMPLE
+    REFERENCES public."ApiTypes" ("typeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."MCPServers"
+ALTER TABLE IF EXISTS public."MCPServers"
     ADD FOREIGN KEY ("providerId")
-    REFERENCES prompt_sales."Providers" ("providerId") MATCH SIMPLE
+    REFERENCES public."Providers" ("providerId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."MCPServers"
+ALTER TABLE IF EXISTS public."MCPServers"
     ADD FOREIGN KEY ("authId")
-    REFERENCES prompt_sales."AuthMethods" ("authId") MATCH SIMPLE
+    REFERENCES public."AuthMethods" ("authId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."IntegrationCalls"
+ALTER TABLE IF EXISTS public."IntegrationCalls"
     ADD FOREIGN KEY ("companyId")
-    REFERENCES prompt_sales."Companies" ("companyId") MATCH SIMPLE
+    REFERENCES public."Companies" ("companyId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."IntegrationCalls"
+ALTER TABLE IF EXISTS public."IntegrationCalls"
     ADD FOREIGN KEY ("providerId")
-    REFERENCES prompt_sales."Providers" ("providerId") MATCH SIMPLE
+    REFERENCES public."Providers" ("providerId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."IntegrationCalls"
+ALTER TABLE IF EXISTS public."IntegrationCalls"
     ADD FOREIGN KEY ("apiId")
-    REFERENCES prompt_sales."ProviderAPIs" ("apiId") MATCH SIMPLE
+    REFERENCES public."ProviderAPIs" ("apiId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."callErrors"
+ALTER TABLE IF EXISTS public."callErrors"
     ADD FOREIGN KEY ("callId")
-    REFERENCES prompt_sales."IntegrationCalls" ("callId") MATCH SIMPLE
+    REFERENCES public."IntegrationCalls" ("callId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."callErrors"
+ALTER TABLE IF EXISTS public."callErrors"
     ADD FOREIGN KEY ("errorTypeId")
-    REFERENCES prompt_sales."CallErrorTypes" ("typeId") MATCH SIMPLE
+    REFERENCES public."CallErrorTypes" ("typeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."CallRetryLog"
+ALTER TABLE IF EXISTS public."CallRetryLog"
     ADD FOREIGN KEY ("callId")
-    REFERENCES prompt_sales."IntegrationCalls" ("callId") MATCH SIMPLE
+    REFERENCES public."IntegrationCalls" ("callId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ETLJobs"
+ALTER TABLE IF EXISTS public."ETLJobs"
     ADD FOREIGN KEY ("endpointId")
-    REFERENCES prompt_sales."ProviderAPIs" ("apiId") MATCH SIMPLE
+    REFERENCES public."ProviderAPIs" ("apiId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ETLDeltas"
+ALTER TABLE IF EXISTS public."ETLDeltas"
     ADD FOREIGN KEY ("jobId")
-    REFERENCES prompt_sales."ETLJobs" ("jobId") MATCH SIMPLE
+    REFERENCES public."ETLJobs" ("jobId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
 
 
-ALTER TABLE IF EXISTS prompt_sales."ETLDeltas"
+ALTER TABLE IF EXISTS public."ETLDeltas"
     ADD FOREIGN KEY ("deltaTypeId")
-    REFERENCES prompt_sales."DeltaTypes" ("TypeId") MATCH SIMPLE
+    REFERENCES public."DeltaTypes" ("TypeId") MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
 
