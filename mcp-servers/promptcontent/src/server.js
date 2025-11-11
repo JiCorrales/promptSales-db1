@@ -52,9 +52,9 @@ const CONFIG = {
   pgDim: parseIntEnv('PGVECTOR_DIM', 128)
 };
 
-// Initialize optional MongoDB connection
+// Initialize  MongoDB connection
 await initMongoIfAvailable();
-// Initialize optional pgvector connection
+// Initialize  pgvector connection
 await initPgvectorIfAvailable();
 
 // Estado de salud/ready para probes
