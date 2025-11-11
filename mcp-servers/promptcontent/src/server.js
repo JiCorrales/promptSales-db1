@@ -537,7 +537,9 @@ const healthServer = http.createServer(async (req, res) => {
           const id = `spotify_${al.id}`;
           const description = `${al.title} - ${al.artists?.join(', ') ?? ''}`.trim();
           await upsertEmbedding(id, description);
-          const hashtags = generateHashtags(description, CONFIG.hashtagCount);
+          // Construir keywords desde la descripción para generar hashtags
+          const keywords = buildKeywordList({ description, keywords: [] });
+          const hashtags = generateHashtags(description, keywords).slice(0, CONFIG.hashtagCount);
           await pgPool.query(
             `INSERT INTO images_meta (id, url, title, hashtags, format)
              VALUES ($1, $2, $3, $4, $5)

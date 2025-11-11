@@ -262,5 +262,203 @@
         ]
       }
     ]
+  },
+  {
+    "id": "log-s3txzxp3w6",
+    "createdAt": "2025-11-11T04:46:15.528Z",
+    "campaignName": "Energ�a Natural - Q3",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "J�venes activos",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola J�venes activos, sabemos que fatiga. Campa�a para bebida funcional con foco en energ�a natural y h�bitos saludables..",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina J�venes activos logrando rendimiento con 15% descuento primeras compras.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Prueba tu energ�a natural: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Profesionales ocupados",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Profesionales ocupados, sabemos que cansancio. Campa�a para bebida funcional con foco en energ�a natural y h�bitos saludables..",
+            "suggestedChannels": [
+              "linkedin",
+              "email"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Profesionales ocupados logrando productividad con 15% descuento primeras compras.",
+            "suggestedChannels": [
+              "linkedin",
+              "email"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Prueba tu energ�a natural: visita linkedin y asegura el beneficio.",
+            "suggestedChannels": [
+              "linkedin",
+              "email"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "log-c2s8edt3q4",
+    "createdAt": "2025-11-11T04:46:34.614Z",
+    "campaignName": "Moda Sostenible - Spring",
+    "objective": "consideration",
+    "entries": [
+      {
+        "audience": "Urban style",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Urban style, sabemos que precio. Colecci�n primavera urbana y minimalista con materiales reciclados..",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Urban style logrando estilo con Env�o gratis sobre $50.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Visita la colecci�n: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Eco-conscious",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Eco-conscious, sabemos que greenwashing. Colecci�n primavera urbana y minimalista con materiales reciclados..",
+            "suggestedChannels": [
+              "instagram",
+              "email"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Eco-conscious logrando materiales con Env�o gratis sobre $50.",
+            "suggestedChannels": [
+              "instagram",
+              "email"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Visita la colecci�n: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "email"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "log-fgp9p7aq5p",
+    "createdAt": "2025-11-11T04:46:34.623Z",
+    "campaignName": "Ruta Local - Weekend",
+    "objective": "conversion",
+    "entries": [
+      {
+        "audience": "Familias",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Familias, sabemos que presupuesto. Gu�as de fin de semana con experiencias locales aut�nticas y oferta de reservas..",
+            "suggestedChannels": [
+              "instagram",
+              "facebook"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Familias logrando ocio con 2x1 fines de semana.",
+            "suggestedChannels": [
+              "instagram",
+              "facebook"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Reserva tu ruta: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "facebook"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Parejas",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Parejas, sabemos que tiempo. Gu�as de fin de semana con experiencias locales aut�nticas y oferta de reservas..",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Parejas logrando experiencias con 2x1 fines de semana.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Reserva tu ruta: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          }
+        ]
+      }
+    ]
   }
 ]

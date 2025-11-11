@@ -565,5 +565,212 @@
       ],
       "ideaCount": 3
     }
+  },
+  {
+    "id": "pc-yufg6xbh6v",
+    "createdAt": "2025-11-11T04:44:19.910Z",
+    "request": {
+      "description": "Campa�a de verano con enfoque en aventura sostenible y fotograf�a al aire libre",
+      "campaignGoal": "Awareness de marca eco",
+      "tone": "emocional",
+      "keywords": [
+        "aventura",
+        "sostenible",
+        "outdoor",
+        "fotograf�a",
+        "familia"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "turquesa",
+        "arena",
+        "verde bosque"
+      ],
+      "callToAction": "Descubre tu pr�xima aventura",
+      "aspectRatio": "16:9",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#campa",
+        "#verano",
+        "#enfoque",
+        "#aventura",
+        "#sostenible",
+        "#fotograf",
+        "#outdoor",
+        "#fotografa",
+        "#familia",
+        "#campaa"
+      ],
+      "ideaCount": 3
+    }
+  },
+  {
+    "id": "pc-pw8pm7vmp9",
+    "createdAt": "2025-11-11T04:44:42.587Z",
+    "request": {
+      "description": "Lanzamiento de nueva bebida funcional con foco en energ�a natural",
+      "campaignGoal": "Awareness mercado juvenil",
+      "tone": "promocional",
+      "keywords": [
+        "energ�a",
+        "natural",
+        "deporte",
+        "rutina"
+      ],
+      "channels": [
+        "instagram",
+        "facebook"
+      ],
+      "dominantColors": [
+        "rojo",
+        "negro"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "4:5",
+      "moodboardCount": 2
+    },
+    "response": {
+      "hashtags": [
+        "#lanzamiento",
+        "#nueva",
+        "#bebida",
+        "#funcional",
+        "#energ",
+        "#natural",
+        "#energa",
+        "#deporte",
+        "#rutina",
+        "#de"
+      ],
+      "ideaCount": 2
+    }
+  },
+  {
+    "id": "pc-fppr8r73p8",
+    "createdAt": "2025-11-11T04:44:42.603Z",
+    "request": {
+      "description": "Promoci�n de ropa sostenible edici�n primavera, estilo urbano y minimalista",
+      "campaignGoal": "Consideraci�n ecommerce",
+      "tone": "aspiracional",
+      "keywords": [
+        "sostenible",
+        "urbano",
+        "minimalista",
+        "primavera"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "verde oliva",
+        "blanco"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "9:16",
+      "moodboardCount": 4
+    },
+    "response": {
+      "hashtags": [
+        "#promoci",
+        "#sostenible",
+        "#edici",
+        "#primavera",
+        "#estilo",
+        "#urbano",
+        "#minimalista",
+        "#promocin",
+        "#de",
+        "#ropa"
+      ],
+      "ideaCount": 4
+    }
+  },
+  {
+    "id": "pc-hwfkejvtwj",
+    "createdAt": "2025-11-11T04:44:42.618Z",
+    "request": {
+      "description": "Comunidad tech: tutoriales y tips de productividad para desarrolladores",
+      "campaignGoal": "Retenci�n comunidad",
+      "tone": "educativo",
+      "keywords": [
+        "productividad",
+        "desarrollo",
+        "c�digo",
+        "tips"
+      ],
+      "channels": [
+        "instagram",
+        "email"
+      ],
+      "dominantColors": [
+        "azul",
+        "gris"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "16:9",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#comunidad",
+        "#tutoriales",
+        "#productividad",
+        "#desarrolladores",
+        "#desarrollo",
+        "#cdigo",
+        "#tips",
+        "#tech",
+        "#y",
+        "#de"
+      ],
+      "ideaCount": 3
+    }
+  },
+  {
+    "id": "pc-qmeca28wgg",
+    "createdAt": "2025-11-11T04:44:42.637Z",
+    "request": {
+      "description": "Turismo nacional: rutas de fin de semana y experiencias locales aut�nticas",
+      "campaignGoal": "Conversi�n reservas",
+      "tone": "informativo",
+      "keywords": [
+        "rutas",
+        "fin de semana",
+        "local",
+        "experiencias"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "turquesa",
+        "arena"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "16:9",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#turismo",
+        "#nacional",
+        "#rutas",
+        "#semana",
+        "#experiencias",
+        "#locales",
+        "#findesemana",
+        "#local",
+        "#de",
+        "#fin"
+      ],
+      "ideaCount": 3
+    }
   }
 ]
