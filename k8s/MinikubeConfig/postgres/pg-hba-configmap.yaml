@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pg-hba-cm
+  namespace: promptcontent-dev
+data:
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    # Local connections
+    local   all             all                                     md5
+    # IPv4 connections
+    host    all             all             0.0.0.0/0               md5
+    # IPv6 connections
+    host    all             all             ::/0                    md5

@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: promptcontent-dev
   labels:
     app: postgres
 spec:
+  serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
@@ -23,7 +24,7 @@ spec:
             - containerPort: 5432
           envFrom:
             - configMapRef:
-                name: postgres  # Tu ConfigMap existente con usuario, pass y DB
+                name: postgres
           args:
             - "-c"
             - "listen_addresses=*"
@@ -33,7 +34,12 @@ spec:
             - name: pg-hba
               mountPath: /etc/postgresql
               readOnly: true
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
       volumes:
         - name: pg-hba
           configMap:
             name: pg-hba-cm
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-volume-claim
