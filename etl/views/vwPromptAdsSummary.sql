@@ -16,38 +16,26 @@ WITH MetricsByAd AS (
 ),
 ChannelsByAd AS (
     SELECT
-        x.AdId,
-        STRING_AGG(x.ChannelName, ', ')
-            AS Channels
-    FROM (
-        SELECT DISTINCT
-            ipa.AdId,
-            ch.name AS ChannelName
-        FROM dbo.InfluencersPerAd ipa
-        JOIN dbo.Influencers inf ON inf.InfluencerId = ipa.InfluencerId
-        JOIN dbo.Channels    ch  ON ch.ChannelId     = inf.ChannelId
-        WHERE ipa.enabled = 1
-    ) x
-    GROUP BY x.AdId
+        ipa.AdId,
+        STRING_AGG(DISTINCT ch.name, ', ') AS Channels
+    FROM dbo.InfluencersPerAd ipa
+    JOIN dbo.Influencers inf ON inf.InfluencerId = ipa.InfluencerId
+    JOIN dbo.Channels ch     ON ch.ChannelId     = inf.ChannelId
+    WHERE ipa.enabled = 1
+    GROUP BY ipa.AdId
 ),
 MarketsByAd AS (
     SELECT
-        y.AdId,
-        STRING_AGG(y.TargetName, ', ') 
-            AS TargetMarkets
-    FROM (
-        SELECT DISTINCT
-            aa.AdId,
-            ta.name AS TargetName
-        FROM dbo.AdAudience aa
-        JOIN dbo.TargetAudience ta ON ta.TargetAudienceId = aa.TargetAudienceId
-        WHERE aa.enabled = 1
-    ) y
-    GROUP BY y.AdId
+        aa.AdId,
+        STRING_AGG(DISTINCT ta.name, ', ') AS TargetMarkets
+    FROM dbo.AdAudience aa
+    JOIN dbo.TargetAudience ta ON ta.TargetAudienceId = aa.TargetAudienceId
+    WHERE aa.enabled = 1
+    GROUP BY aa.AdId
 )
 SELECT
     camp.CampaignId,
-    camp.name        AS CampaignName,
+    camp.name        AS CampaignName, 
     camp.startDate,
     camp.endDate,
     camp.budget      AS CampaignBudget,

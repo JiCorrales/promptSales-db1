@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<DTS:ConnectionManager xmlns:DTS="www.microsoft.com/SqlServer/Dts"
+  DTS:ObjectName="127.0.0.1,1433.PromptCRM.sa"
+  DTS:DTSID="{D5B27B4C-D239-4282-B426-1E7505F5B47F}"
+  DTS:CreationName="ADO.NET:Microsoft.Data.SqlClient.SqlConnection, Microsoft.Data.SqlClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5">
+  <DTS:ObjectData>
+    <DTS:ConnectionManager
+      DTS:ConnectionString="Data Source=127.0.0.1,1433;User ID=sa;Initial Catalog=PromptCRM;Persist Security Info=True;Trust Server Certificate=True;">
+      <DTS:Password
+        DTS:Name="Password"
+        Sensitive="1">AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAFwkTqALmPkOIzKJZ+UqPEQAAAAACAAAAAAAQZgAAAAEAACAAAAAEhw1D3XtTfPX7dPSSZyESv2VPGN2NU9wesQGHKRvTCAAAAAAOgAAAAAIAACAAAADzzfzth4X05ojN2HM58VSv7D65evAdyFOoSzaUUZueiYAAAADVzWnTr87g2E+bXyzngEL0bj5z/ZZq3Epmb2VGJqNPdejoIXRDx8Y7V5mD0BNHVEHaTTzNPl4w1Sy7IRzksTrKvT0s3/TgWrgf81C9xLdH1aNPkyIfXV7todVVJAWSLbB8zxGnBe+qeQhGHaMSc8JwrAkCXEDjQS9taAFSebpczEAAAAAqmKEEtTY2HDJ/Wx0MsSIP6K28TISPp/nskc4usSSRo0t44Ujc8EdUjgEe6K3oLIY3czDwqYrzBUJXnL/yzkBP</DTS:Password>
+    </DTS:ConnectionManager>
+  </DTS:ObjectData>
+</DTS:ConnectionManager>

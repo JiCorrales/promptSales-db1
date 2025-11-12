@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<DTS:ConnectionManager xmlns:DTS="www.microsoft.com/SqlServer/Dts"
+  DTS:ObjectName="PromptAds"
+  DTS:DTSID="{66F4AC0A-909D-4A01-B4C9-CAD66912D715}"
+  DTS:CreationName="ADO.NET:System.Data.SqlClient.SqlConnection, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+  <DTS:ObjectData>
+    <DTS:ConnectionManager
+      DTS:ConnectionString="Data Source=127.0.0.1,1433;User ID=sa;Initial Catalog=PromptAds;Persist Security Info=True;TrustServerCertificate=True;Application Name=SSIS-{66F4AC0A-909D-4A01-B4C9-CAD66912D715}127.0.0.1,1433.PromptAds.sa;">
+      <DTS:Password
+        DTS:Name="Password"
+        Sensitive="1">AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAFwkTqALmPkOIzKJZ+UqPEQAAAAACAAAAAAAQZgAAAAEAACAAAACQPaWHdE3nQE4znEOOe4BhsMkjYio/nddpjtCXzFK74gAAAAAOgAAAAAIAACAAAABXxvX8YpkxJLOBGS5Orcif1eL70JMyfTKOK/clJIRT74AAAADVw9iI2aKNHOAIz2gGsd5/nildxYrMc0B1H1mCUADI2C6zb9DKPaEE7rIcQ9BP2ombNWetsTVS1UQjy8cSQMrNUP0TH3RRvGLIaS3RlkX5rQuaY/Ad04DOOzsMAIxx5SpA+drptmBmelLEP6IBeZTXojGsIrtn4I+9ZHj9kter9kAAAABteShkmlZ6ZL7H49EVSQQnMff3u27yyONdd0PKSRTwCe47zcdhLcv+Ht+fwI4B6pZKQ+WO6vdGwtiUampMgKrF</DTS:Password>
+    </DTS:ConnectionManager>
+  </DTS:ObjectData>
+</DTS:ConnectionManager>

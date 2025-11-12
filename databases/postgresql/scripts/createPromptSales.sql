@@ -695,6 +695,8 @@ CREATE TABLE IF NOT EXISTS public."RawPromptCrm" (
   raw_id                    BIGSERIAL PRIMARY KEY
 );
 
+alter table if exists public."RawPromptCrm1" drop column converted_to_customer_at;
+alter table if exists public."RawPromptCrm1" drop column conversion_value;
 
 
 ALTER TABLE IF EXISTS public."Permissions"

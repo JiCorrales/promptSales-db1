@@ -28,8 +28,6 @@ SELECT
     l.assigned_at,
     l.last_contacted_at,
     l.next_followup_date,
-    l.converted_to_customer_at,
-    l.conversion_value,
 
     COUNT(le.lead_event_id)                           AS total_events,
     SUM(CASE WHEN let.event_type_name = 'Conversion' THEN 1 ELSE 0 END)      AS conversion_events,

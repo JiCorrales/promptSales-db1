@@ -1,0 +1,14 @@
+﻿<?xml version="1.0"?>
+<DTS:ConnectionManager xmlns:DTS="www.microsoft.com/SqlServer/Dts"
+  DTS:ObjectName="PostgreSQL35W.User"
+  DTS:DTSID="{2D9280E3-8D00-45C9-9589-8EBF1C68F88E}"
+  DTS:CreationName="ADO.NET:System.Data.Odbc.OdbcConnection, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+  <DTS:ObjectData>
+    <DTS:ConnectionManager
+      DTS:ConnectionString="uid=User;Dsn=PostgreSQL35W;">
+      <DTS:Password
+        DTS:Name="pwd"
+        Sensitive="1">AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAFwkTqALmPkOIzKJZ+UqPEQAAAAACAAAAAAAQZgAAAAEAACAAAADuz1QB4JblQShvR8ShgAgHFBAI1YbCrqq88bPWRE+9GgAAAAAOgAAAAAIAACAAAACWVMJIiAoMuk9sX6gPyQLsojZThd6BhZQKyVOuDeXZEnAAAABX4xXm2rjA47t9AfpoOOL/6Siv+xlxxsac+pI7U7fFLnVZmj9Yi89N6rdiPvufwJJSujfG4Ecvam3Ltm5qRYkZOw5tgSJchCCVT5Lt5ZYR2Pu0siyRRzpfSyNWlgcrB4wvb5nKBEzx2PpMLxc080SKQAAAACLnmio5pgIea8IS0nC/or5DlWECeh3U01uzNRsd7TVMqxhZHqgWgrAn6rMA7e1gyovqjishEsHjHz0Bii9HayY=</DTS:Password>
+    </DTS:ConnectionManager>
+  </DTS:ObjectData>
+</DTS:ConnectionManager>
