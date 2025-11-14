@@ -772,5 +772,161 @@
       ],
       "ideaCount": 3
     }
+  },
+  {
+    "id": "pc-m2kcdm7ed9",
+    "createdAt": "2025-11-11T08:23:15.653Z",
+    "request": {
+      "description": "atardecer en la playa con tonos c�lidos",
+      "campaignGoal": "engagement",
+      "tone": "aspiracional",
+      "keywords": [],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "#F97316",
+        "#1E293B",
+        "#FDE047"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "4:5",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#atardecer",
+        "#playa",
+        "#tonos",
+        "#lidos",
+        "#en",
+        "#la",
+        "#con",
+        "#clidos",
+        "#marketing",
+        "#campana"
+      ],
+      "ideaCount": 3
+    }
+  },
+  {
+    "id": "pc-fg2grtxbtv",
+    "createdAt": "2025-11-11T08:33:33.766Z",
+    "request": {
+      "description": "Nueva bebida hidratante natural con electrolitos vegetales",
+      "campaignGoal": "Generar expectativa en digital",
+      "tone": "aspiracional",
+      "keywords": [
+        "hidratacion",
+        "energia limpia"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "#00B0FF",
+        "#F5F5F5"
+      ],
+      "callToAction": "Descubre la experiencia",
+      "aspectRatio": "4:5",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#nueva",
+        "#bebida",
+        "#hidratante",
+        "#natural",
+        "#electrolitos",
+        "#vegetales",
+        "#hidratacion",
+        "#energialimpia",
+        "#con",
+        "#marketing"
+      ],
+      "ideaCount": 3
+    }
+  },
+  {
+    "id": "pc-kqjdvsxzz8",
+    "createdAt": "2025-11-11T08:33:48.054Z",
+    "request": {
+      "description": "Nueva bebida hidratante natural con electrolitos vegetales",
+      "campaignGoal": "Generar expectativa en digital",
+      "tone": "aspiracional",
+      "keywords": [
+        "hidratacion",
+        "energia limpia"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "#00B0FF",
+        "#F5F5F5"
+      ],
+      "callToAction": "Descubre la experiencia",
+      "aspectRatio": "4:5",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#nueva",
+        "#bebida",
+        "#hidratante",
+        "#natural",
+        "#electrolitos",
+        "#vegetales",
+        "#hidratacion",
+        "#energialimpia",
+        "#con",
+        "#marketing"
+      ],
+      "ideaCount": 3
+    }
+  },
+  {
+    "id": "pc-2dvjf4sqrt",
+    "createdAt": "2025-11-11T08:38:51.404Z",
+    "request": {
+      "description": "Nueva bebida hidratante natural sin az�car",
+      "campaignGoal": "engagement",
+      "tone": "aspiracional",
+      "keywords": [
+        "hidratante",
+        "electrolitos",
+        "natural"
+      ],
+      "channels": [
+        "instagram",
+        "tiktok"
+      ],
+      "dominantColors": [
+        "#F97316",
+        "#1E293B",
+        "#FDE047"
+      ],
+      "callToAction": "Descubre mas",
+      "aspectRatio": "4:5",
+      "moodboardCount": 3
+    },
+    "response": {
+      "hashtags": [
+        "#nueva",
+        "#bebida",
+        "#hidratante",
+        "#natural",
+        "#electrolitos",
+        "#sin",
+        "#azcar",
+        "#marketing",
+        "#campana",
+        "#contenido"
+      ],
+      "ideaCount": 3
+    }
   }
 ]

@@ -460,5 +460,137 @@
         ]
       }
     ]
+  },
+  {
+    "id": "log-cuf28yt72v",
+    "createdAt": "2025-11-11T08:34:00.914Z",
+    "campaignName": "Lanzamiento Agua Nova",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Atletas urbanos",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Atletas urbanos, sabemos que bebidas demasiado artificiales. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Atletas urbanos logrando mantenerse activos sin azucares con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita tiktok y asegura el beneficio.",
+            "suggestedChannels": [
+              "tiktok",
+              "instagram"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Profesionales wellness",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Profesionales wellness, sabemos que fatiga por exceso de cafe. Campana que posiciona una bebida premium enfocada en bienestar y energia limpia..",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Profesionales wellness logrando productividad sostenible con Suscripcion con envios semanales.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce mas: visita email y asegura el beneficio.",
+            "suggestedChannels": [
+              "email",
+              "linkedin"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "log-sz8m4vqkng",
+    "createdAt": "2025-11-11T08:39:24.841Z",
+    "campaignName": "Lanzamiento Bebida Verde",
+    "objective": "awareness",
+    "entries": [
+      {
+        "audience": "Deportistas",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Deportistas, sabemos que fatiga post-entreno. Bebida hidratante natural sin az�car con electrolitos vegetales..",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Deportistas logrando recuperaci�n r�pida con nuestra propuesta principal.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce m�s y pru�bala hoy: visita instagram y asegura el beneficio.",
+            "suggestedChannels": [
+              "instagram",
+              "tiktok"
+            ]
+          }
+        ]
+      },
+      {
+        "audience": "Vida saludable",
+        "messages": [
+          {
+            "stage": "Descubrimiento",
+            "copy": "Hola Vida saludable, sabemos que productos con qu�micos. Bebida hidratante natural sin az�car con electrolitos vegetales..",
+            "suggestedChannels": [
+              "email",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Consideracion",
+            "copy": "Imagina Vida saludable logrando ingredientes naturales con nuestra propuesta principal.",
+            "suggestedChannels": [
+              "email",
+              "instagram"
+            ]
+          },
+          {
+            "stage": "Conversion",
+            "copy": "Conoce m�s y pru�bala hoy: visita email y asegura el beneficio.",
+            "suggestedChannels": [
+              "email",
+              "instagram"
+            ]
+          }
+        ]
+      }
+    ]
   }
 ]

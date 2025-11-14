@@ -28,7 +28,8 @@
 				"MONGODB_DB_NAME": "promptcontent_dev",
 				"PC_CONTENT_REQUESTS_COLLECTION": "ContentRequests",
 				"PC_CAMPAIGN_LOGS_COLLECTION": "CampaignLogs",
-				"PGVECTOR_DSN": "postgres://postgres:postgres@localhost:5432/promptcontent",
+				"PROMPTCONTENT_NO_LISTEN": "1",
+				"PGVECTOR_DSN": "postgres://postgres:postgres@localhost:55432/postgres",
 				"PGVECTOR_TABLE": "content_embeddings",
 				"PGVECTOR_DIM": "128"
 			}
