@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promptads-mcp-server
+  namespace: mssql
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: promptads-mcp-server
+  template:
+    metadata:
+      labels:
+        app: promptads-mcp-server
+    spec:
+      containers:
+      - name: promptads-mcp-server
+        image: promptads-mcp-server:v3    # ← cambia al tag que construyas
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - secretRef: { name: promptads-db-secret }
+        - secretRef: { name: mcp-secret }
+        - configMapRef: { name: promptads-config }
+        readinessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 15
+          periodSeconds: 20

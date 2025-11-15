@@ -5,4 +5,4 @@ mcp-servers/promptcontent/node_modules
 local/.env
 mcp-servers/promptcontent/.env
 mcp-servers/promptcontent/.env.local
-mcp-servers\promptads\node_modules
+mcp-servers/promptads/node_modules

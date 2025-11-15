@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: promptads-mcp-service
+  namespace: mssql
+spec:
+  type: ClusterIP
+  selector:
+    app: promptads-mcp-server
+  ports:
+  - port: 8080
+    targetPort: 8080
+

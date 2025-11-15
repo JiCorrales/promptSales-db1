@@ -8,10 +8,10 @@ WORKDIR /app
 COPY package.json ./
 
 # Instalamos dependencias (solo producción)
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Copiamos el resto del código
-COPY server.js ./server.js
+COPY server.js ./
 
 # Exponemos el puerto que usa nuestro servidor
 EXPOSE 8080
