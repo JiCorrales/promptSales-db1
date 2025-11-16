@@ -1,4 +1,5 @@
 import dotenv from "dotenv"
+import http from "http"
 dotenv.config()
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
@@ -86,6 +87,8 @@ server.registerTool(
             const need = 3 - images.length
             images = [...images, ...extras.slice(0, need)]
         }
+
+        images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }))
 
         const hashtagsBase = extractHashtags(descripcion)
         const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(t => normalizeHashtag(t))
@@ -352,18 +355,6 @@ server.registerTool(
                 metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
                 createdAt: new Date()
             })
-            try {
-                await db.collection("CampaingLogs").insertOne({
-                    logId: id,
-                    campaignRef: id,
-                    audience: `${(publico.edad?.min||"")}-${(publico.edad?.max||"")} ${(publico.intereses||[]).join(", ")} ${(publico.ubicaciones||[]).join(", ")}`.trim(),
-                    messages,
-                    messageCount: messages.length,
-                    lastMessageTs: messages.length ? messages[messages.length-1].ts : new Date(),
-                    metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
-                    createdAt: new Date()
-                })
-            } catch {}
             await db.collection("AIRequests").insertOne({
                 aiRequestId: id,
                 createdAt: new Date(),
@@ -395,6 +386,10 @@ server.registerTool(
 function normalizeHashtag(t: string) {
     const cleaned = t.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`
+}
+
+function sanitizeUrl(u: string) {
+    return (u || "").replace(/^[\s`]+|[\s`]+$/g, "")
 }
 
 function extractHashtags(text: string) {
@@ -466,3 +461,22 @@ async function main() {
 }
 
 main()
+
+const port = Number(process.env.PORT || 8080)
+if (process.env.PROMPTCONTENT_NO_LISTEN !== "1") {
+    const srv = http.createServer((req, res) => {
+        if (req.url === "/readyz") {
+            res.writeHead(200, { "Content-Type": "text/plain" })
+            res.end("ok")
+            return
+        }
+        if (req.url === "/healthz") {
+            res.writeHead(200, { "Content-Type": "application/json" })
+            res.end(JSON.stringify({ status: "ok" }))
+            return
+        }
+        res.writeHead(404)
+        res.end()
+    })
+    srv.listen(port)
+}
