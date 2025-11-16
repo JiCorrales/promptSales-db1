@@ -352,6 +352,32 @@ server.registerTool(
                 metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
                 createdAt: new Date()
             })
+            try {
+                await db.collection("CampaingLogs").insertOne({
+                    logId: id,
+                    campaignRef: id,
+                    audience: `${(publico.edad?.min||"")}-${(publico.edad?.max||"")} ${(publico.intereses||[]).join(", ")} ${(publico.ubicaciones||[]).join(", ")}`.trim(),
+                    messages,
+                    messageCount: messages.length,
+                    lastMessageTs: messages.length ? messages[messages.length-1].ts : new Date(),
+                    metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
+                    createdAt: new Date()
+                })
+            } catch {}
+            await db.collection("AIRequests").insertOne({
+                aiRequestId: id,
+                createdAt: new Date(),
+                completedAt: new Date(),
+                status: "completed",
+                prompt: descripcion,
+                context: {
+                    type: "text",
+                    language: "es",
+                    campaignRef: id
+                },
+                requestBody: publico,
+                mcp: { serverKey: "mcp-server-promptcontent", tool: "generateCampaignMessages" }
+            })
         } catch {}
 
         const output = {
@@ -400,10 +426,29 @@ async function semanticSearch(query: string) {
     try {
         const pc = getPinecone()
         const index = pc.index(process.env.PINECONE_INDEX || "promptcontent")
-        const { OpenAI } = await import("openai")
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-        const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query })
-        const res = await index.query({ vector: emb.data[0].embedding, topK: 5, includeMetadata: true })
+        let vector: number[]
+        try {
+            const { OpenAI } = await import("openai")
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+            const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query })
+            vector = emb.data[0].embedding as any
+        } catch {
+            function pseudoEmbedding(text: string, dim = 1536) {
+                let h = 2166136261
+                for (let i = 0; i < text.length; i++) h = (h ^ text.charCodeAt(i)) * 16777619
+                const out = new Array(dim)
+                let x = h >>> 0
+                for (let i = 0; i < dim; i++) {
+                    x ^= x << 13
+                    x ^= x >>> 17
+                    x ^= x << 5
+                    out[i] = (x % 1000) / 1000
+                }
+                return out
+            }
+            vector = pseudoEmbedding(query)
+        }
+        const res = await index.query({ vector, topK: 5, includeMetadata: true })
         return (res.matches || []).map(m => ({
             url: (m.metadata as any).url,
             alt: (m.metadata as any).alt,
