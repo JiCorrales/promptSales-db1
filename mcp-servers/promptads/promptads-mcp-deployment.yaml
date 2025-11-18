@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: promptads-mcp-server
-        image: promptads-mcp-server:v3    # ← cambia al tag que construyas
+        image: promptads-mcp-server:v3    
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
