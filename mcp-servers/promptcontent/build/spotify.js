@@ -10,8 +10,6 @@ let token = null;
 let expiresAt = 0;
 const cache = new Map();
 const TTL = 5 * 60 * 1000;
-
-
 function getCreds() {
     const id = process.env.SPOTIFY_CLIENT_ID;
     const secret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -19,8 +17,6 @@ function getCreds() {
         return null;
     return { id, secret };
 }
-
-
 async function refreshToken() {
     const tries = [0, 300, 1000];
     for (const delayMs of tries) {
@@ -45,16 +41,12 @@ async function refreshToken() {
     }
     return null;
 }
-
-
 async function getSpotifyToken() {
     if (!token || Date.now() >= expiresAt) {
         return await refreshToken();
     }
     return token;
 }
-
-
 async function searchTrack(query, limit = 5) {
     const key = `${query}:${limit}`;
     const now = Date.now();
@@ -88,9 +80,8 @@ async function searchTrack(query, limit = 5) {
     }
     return mockTracks(query, limit);
 }
-
-
 function mockTracks(query, limit) {
+    const genres = ["pop", "rock", "indie", "electrónica", "jazz", "reggaetón", "salsa", "clásica"];
     const tracks = [];
     for (let i = 0; i < limit; i++) {
         tracks.push({

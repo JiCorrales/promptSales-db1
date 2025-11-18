@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
+const http_1 = __importDefault(require("http"));
 dotenv_1.default.config();
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const zod_1 = require("zod");
@@ -84,6 +85,7 @@ server.registerTool("getContent", {
         const need = 3 - images.length;
         images = [...images, ...extras.slice(0, need)];
     }
+    images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }));
     const hashtagsBase = extractHashtags(descripcion);
     const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(t => normalizeHashtag(t));
     let hashtags = Array.from(new Set([...hashtagsBase, ...hashtagsFromImages])).slice(0, 15);
@@ -321,6 +323,20 @@ server.registerTool("createCampaign", {
             metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
             createdAt: new Date()
         });
+        await db.collection("AIRequests").insertOne({
+            aiRequestId: id,
+            createdAt: new Date(),
+            completedAt: new Date(),
+            status: "completed",
+            prompt: descripcion,
+            context: {
+                type: "text",
+                language: "es",
+                campaignRef: id
+            },
+            requestBody: publico,
+            mcp: { serverKey: "mcp-server-promptcontent", tool: "generateCampaignMessages" }
+        });
     }
     catch { }
     const output = {
@@ -336,6 +352,9 @@ server.registerTool("createCampaign", {
 function normalizeHashtag(t) {
     const cleaned = t.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`;
+}
+function sanitizeUrl(u) {
+    return (u || "").replace(/^[\s`]+|[\s`]+$/g, "");
 }
 function extractHashtags(text) {
     const lower = text.toLowerCase();
@@ -364,10 +383,31 @@ async function semanticSearch(query) {
     try {
         const pc = getPinecone();
         const index = pc.index(process.env.PINECONE_INDEX || "promptcontent");
-        const { OpenAI } = await import("openai");
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
-        const res = await index.query({ vector: emb.data[0].embedding, topK: 5, includeMetadata: true });
+        let vector;
+        try {
+            const { OpenAI } = await import("openai");
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
+            vector = emb.data[0].embedding;
+        }
+        catch {
+            function pseudoEmbedding(text, dim = 1536) {
+                let h = 2166136261;
+                for (let i = 0; i < text.length; i++)
+                    h = (h ^ text.charCodeAt(i)) * 16777619;
+                const out = new Array(dim);
+                let x = h >>> 0;
+                for (let i = 0; i < dim; i++) {
+                    x ^= x << 13;
+                    x ^= x >>> 17;
+                    x ^= x << 5;
+                    out[i] = (x % 1000) / 1000;
+                }
+                return out;
+            }
+            vector = pseudoEmbedding(query);
+        }
+        const res = await index.query({ vector, topK: 5, includeMetadata: true });
         return (res.matches || []).map(m => ({
             url: m.metadata.url,
             alt: m.metadata.alt,
@@ -384,3 +424,21 @@ async function main() {
     await server.connect(transport);
 }
 main();
+const port = Number(process.env.PORT || 8080);
+if (process.env.PROMPTCONTENT_NO_LISTEN !== "1") {
+    const srv = http_1.default.createServer((req, res) => {
+        if (req.url === "/readyz") {
+            res.writeHead(200, { "Content-Type": "text/plain" });
+            res.end("ok");
+            return;
+        }
+        if (req.url === "/healthz") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ status: "ok" }));
+            return;
+        }
+        res.writeHead(404);
+        res.end();
+    });
+    srv.listen(port);
+}

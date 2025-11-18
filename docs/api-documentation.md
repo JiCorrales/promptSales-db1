@@ -45,9 +45,13 @@ Servidor MCP que expone dos herramientas: `getContent` y `campaignDiary`. Ambas 
 - `POST`: crea/actualiza metadatos.
 - `DELETE`: elimina por `id`.
 
+Notas:
+- Almacenamiento primario: MongoDB (`PC_IMAGES_COLLECTION`) cuando está configurado. Si Mongo no está disponible, se usa Postgres (`images_meta`) como alternativa.
+
 ### Notas de configuración
 - Variables de entorno relevantes para pgvector: `PGVECTOR_DSN`, `PGVECTOR_TABLE`, `PGVECTOR_DIM`.
-- La tabla `images_meta` incluye columnas técnicas: `format`, `size_bytes`, `width`, `height`.
+- MongoDB: `MONGODB_URI`, `MONGODB_DB_NAME`, `PC_IMAGES_COLLECTION`.
+- Cuando se usa Postgres como alternativa, la tabla `images_meta` incluye columnas técnicas: `format`, `size_bytes`, `width`, `height`.
 
 ### Integración externa
 - `POST /external/spotify/import`: requiere `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` en entorno. Cuerpo: `{ "q": "consulta", "limit": 20 }`. Importa portadas de álbumes como imágenes con hashtags generados y crea vectores a partir del título.
@@ -74,7 +78,7 @@ Servidor MCP que expone dos herramientas: `getContent` y `campaignDiary`. Ambas 
 ## Configuración
 - Variables de entorno principales (ver `.vscode/mcp.json`):
   - `PC_DEFAULT_CHANNELS`, `PC_HASHTAG_COUNT`, `PC_MOODBOARD_MAX`, `PC_KEYWORD_MAX`, `PC_MESSAGE_TEMPLATES`.
-  - MongoDB: `MONGODB_URI`, `MONGODB_DB_NAME`, `PC_CONTENT_REQUESTS_COLLECTION`, `PC_CAMPAIGN_LOGS_COLLECTION`.
+  - MongoDB: `MONGODB_URI`, `MONGODB_DB_NAME`, `PC_CONTENT_REQUESTS_COLLECTION`, `PC_CAMPAIGN_LOGS_COLLECTION`, `PC_IMAGES_COLLECTION`.
   - pgvector: `PGVECTOR_DSN`, `PGVECTOR_TABLE`, `PGVECTOR_DIM`.
 
 ## Persistencia y Seguridad
