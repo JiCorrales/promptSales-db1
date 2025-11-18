@@ -1,52 +1,25 @@
-// api/mcp.ts  (raíz del proyecto, carpeta api/ para Vercel Node Functions)
+
 import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
-import dotenv from "dotenv"
-dotenv.config()
-
-import { createPromptContentServer } from "./src/server" // ajusta la ruta según tu estructura
-
-export const config = {
-    // Forzar runtime Node (no Edge) para que Mongo, Pinecone, etc. funcionen bien
-    runtime: "nodejs20"
-}
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streaming-http.js"
+import { createPromptContentServer } from "../src/server"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // MCP normalmente habla por POST; puedes dejar GET para healthcheck si quieres.
-    if (req.method !== "POST") {
-        res.status(405).json({ error: "Method Not Allowed. Use POST with MCP JSON-RPC body." })
-        return
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method Not Allowed. Use POST with JSON-RPC 2.0 body." })
+    return
+  }
+
+  const server = createPromptContentServer()
+
+  const transport = new StreamableHTTPServerTransport({
+    send: async (message) => {
+      res.setHeader("Content-Type", "application/json")
+      res.status(200).send(JSON.stringify(message))
+    },
+    receive: async () => {
+      return req.body
     }
+  })
 
-    try {
-        const server = createPromptContentServer()
-
-        // Transport HTTP streamable del SDK MCP
-        const transport = new StreamableHTTPServerTransport()
-
-        // Limpiar recursos cuando la respuesta se cierra
-        res.on("close", () => {
-            transport.close()
-            server.close()
-        })
-
-        await server.connect(transport)
-
-        // En Vercel, si el Content-Type es application/json,
-        // req.body ya viene parseado. Lo pasamos al transport.
-        await transport.handleRequest(req as any, res as any, req.body)
-        // No hacemos res.end aquí: handleRequest se encarga.
-    } catch (error) {
-        console.error("Error handling MCP request:", error)
-        if (!res.headersSent) {
-            res.status(500).json({
-                jsonrpc: "2.0",
-                error: {
-                    code: -32603,
-                    message: "Internal server error"
-                },
-                id: null
-            })
-        }
-    }
+  await server.connect(transport)
 }
