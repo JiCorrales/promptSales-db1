@@ -4,6 +4,7 @@ dotenv.config()
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 import { MongoClient, Db } from "mongodb"
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { Pinecone } from "@pinecone-database/pinecone"
 import { searchTrack } from "./spotify"
 
@@ -541,3 +542,11 @@ export function createPromptContentServer() {
 
     return server
 }
+
+(async () => {
+    if (process.env.RUN_AS_MCP_STDIO !== "0") {
+        const server = createPromptContentServer()
+        const transport = new StdioServerTransport()
+        await server.connect(transport)
+    }
+})()

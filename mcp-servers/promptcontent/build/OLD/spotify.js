@@ -81,6 +81,7 @@ async function searchTrack(query, limit = 5) {
     return mockTracks(query, limit);
 }
 function mockTracks(query, limit) {
+    const genres = ["pop", "rock", "indie", "electrónica", "jazz", "reggaetón", "salsa", "clásica"];
     const tracks = [];
     for (let i = 0; i < limit; i++) {
         tracks.push({
