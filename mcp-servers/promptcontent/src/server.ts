@@ -215,12 +215,9 @@ function sanitizeUrl(u: string) {
 function themedImageUrl(tokens: string[], i: number) {
     const toks = tokens.filter(Boolean).map(t => toEnglishToken(toTagToken(t)))
     const pool = Array.from(new Set(toks))
-    const pick = [] as string[]
-    while (pick.length < Math.min(3, pool.length)) {
-        const j = Math.floor(Math.random() * pool.length)
-        const val = pool[j]
-        if (!pick.includes(val)) pick.push(val)
-    }
+    const priority = new Set(["sunrise", "sunset", "sun"])
+    const sorted = [...pool].sort((a, b) => (priority.has(b) ? 1 : 0) - (priority.has(a) ? 1 : 0))
+    const pick = sorted.slice(0, Math.min(3, sorted.length))
     const q = pick.map(t => encodeURIComponent(t)).join(",")
     return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : ""
 }
@@ -245,6 +242,7 @@ function extractHashtags(text: string) {
     const unique = Array.from(new Set(words))
     return unique.slice(0, 15).map(w => normalizeHashtag(w))
 }
+
 
 async function translateToEnglish(text: string) {
     try {
@@ -437,6 +435,7 @@ export function createPromptContentServer() {
                     const enhancedQuery = searchText + (explicitTokensEn.length > 0 ? " hashtags: " + explicitTokensEn.join(", ") : "");
                     images = await semanticSearch(enhancedQuery, explicitTokensEn);
                 }
+                // No mock fallback: keep empty if semantic search returns none
                 // Filtro post-búsqueda para priorizar coincidencias con hashtags
                 images = images.filter(img => {
                     if (explicitTokensEn.length === 0) return true;

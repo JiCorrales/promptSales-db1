@@ -246,6 +246,17 @@ function extractHashtags(text) {
     const unique = Array.from(new Set(words));
     return unique.slice(0, 15).map(w => normalizeHashtag(w));
 }
+function mockImagesFromTokens(tokens, count = 5) {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+        const url = themedImageUrl(tokens, i);
+        const alt = `${toEnglishToken(tokens[0] || "image")} image with authentic colors`;
+        const tags = Array.from(new Set(tokens.map(toEnglishToken))).slice(0, 5);
+        const score = 2 + Math.random() * 0.5;
+        out.push({ url, alt, tags, score });
+    }
+    return out;
+}
 async function translateToEnglish(text) {
     try {
         const { OpenAI } = await import("openai");
@@ -419,6 +430,10 @@ function createPromptContentServer() {
                 const enhancedQuery = searchText + (explicitTokensEn.length > 0 ? " hashtags: " + explicitTokensEn.join(", ") : "");
                 images = await semanticSearch(enhancedQuery, explicitTokensEn);
             }
+            if (images.length === 0) {
+                const baseTokens = explicitTokensEn.length > 0 ? explicitTokensEn : extractHashtags(searchText).map(toTagToken).map(toEnglishToken);
+                images = mockImagesFromTokens(baseTokens);
+            }
             // Filtro post-búsqueda para priorizar coincidencias con hashtags
             images = images.filter(img => {
                 if (explicitTokensEn.length === 0)
@@ -428,7 +443,8 @@ function createPromptContentServer() {
             });
         }
         catch {
-            images = [];
+            const baseTokens = explicitTokensEn.length > 0 ? explicitTokensEn : extractHashtags(searchText).map(toTagToken).map(toEnglishToken);
+            images = mockImagesFromTokens(baseTokens);
         }
         // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
         if (explicitTokensEn.length > 0) {
