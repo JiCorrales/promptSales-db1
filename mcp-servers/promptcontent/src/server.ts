@@ -1,4 +1,4 @@
-/** 
+/**
  * @file MCP server para PromptContent.
  * @description Expone herramientas MCP para:
  *  - Búsqueda de imágenes (MongoDB + Pinecone/OpenAI o mock).
@@ -15,6 +15,7 @@ import { MongoClient, Db } from "mongodb"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { Pinecone } from "@pinecone-database/pinecone"
 import { searchTrack } from "./spotify"
+import * as http from "http"
 
 /**
  * Cliente global de MongoDB reutilizable.
@@ -87,6 +88,10 @@ function normalizeHashtag(t: string) {
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`
 }
 
+function toTagToken(t: string) {
+    return t.replace(/^#/, "").toLowerCase()
+}
+
 /**
  * Elimina espacios y backticks al inicio y al final de una URL.
  *
@@ -97,18 +102,26 @@ function sanitizeUrl(u: string) {
     return (u || "").replace(/^[\s`]+|[\s`]+$/g, "")
 }
 
+function themedImageUrl(tokens: string[], i: number) {
+    const q = tokens
+        .filter(Boolean)
+        .map(t => encodeURIComponent(toTagToken(t)))
+        .slice(0, 3)
+        .join(",")
+    return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : ""
+}
+
 /**
- * Extrae hashtags a partir de un texto en español.
- *
- * - Convierte a minúsculas.
- * - Separa por caracteres no alfanuméricos.
- * - Elimina palabras vacías (stopwords) comunes en español.
- * - Filtra palabras de longitud mayor a 2.
- * - Genera hashtags normalizados.
- * - Limita a 15 hashtags.
- *
- * @param {string} text Texto de entrada.
- * @returns {string[]} Lista de hashtags sugeridos.
+ * The function `extractHashtags` takes a string of text, extracts words excluding common stop words,
+ * filters out short words, and returns up to 15 unique hashtags in lowercase format.
+ * @param {string} text - The function `extractHashtags` takes a string `text` as input and extracts
+ * hashtags from it. It first converts the text to lowercase, splits it into tokens based on
+ * non-alphanumeric characters, filters out common stop words, and keeps words longer than 2
+ * characters. It then removes duplicates and
+ * @returns The function `extractHashtags` takes a string of text as input, extracts words from the
+ * text, filters out common stop words, and returns an array of unique hashtags (words longer than 2
+ * characters) with a maximum of 15 hashtags. Each hashtag is normalized using the `normalizeHashtag`
+ * function before being returned.
  */
 function extractHashtags(text: string) {
     const lower = text.toLowerCase()
@@ -119,17 +132,7 @@ function extractHashtags(text: string) {
     return unique.slice(0, 15).map(w => normalizeHashtag(w))
 }
 
-/**
- * Calcula un hash entero a partir de una cadena (similar a Java).
- *
- * @param {string} str Cadena de entrada.
- * @returns {number} Hash entero con signo.
- */
-function hashCode(str: string) {
-    let h = 0
-    for (let i = 0; i < str.length; i++) h = (h << 5) - h + str.charCodeAt(i)
-    return h | 0
-}
+
 
 /**
  * @typedef {Object} ImageResult
@@ -139,23 +142,7 @@ function hashCode(str: string) {
  * @property {string[]} [tags] Etiquetas asociadas a la imagen.
  */
 
-/**
- * Genera un conjunto determinista de imágenes mock a partir de una semilla.
- *
- * Se usa como fallback cuando no hay acceso a Pinecone/Mongo/OpenAI.
- *
- * @param {string} seed Semilla para la generación determinista.
- * @returns {ImageResult[]} Arreglo de imágenes de prueba.
- */
-function mockImages(seed: string) {
-    const base = Math.abs(hashCode(seed))
-    const arr: { url: string; alt?: string; tags?: string[] }[] = []
-    for (let i = 0; i < 5; i++) {
-        const s = base + i
-        arr.push({ url: `https://picsum.photos/seed/${s}/800/600`, alt: `image-${s}` })
-    }
-    return arr
-}
+
 
 /**
  * Realiza una búsqueda semántica de imágenes usando Pinecone.
@@ -171,44 +158,20 @@ function mockImages(seed: string) {
  * @param {string} query Texto de búsqueda semántica.
  * @returns {Promise<ImageResult[]>} Lista de imágenes similares a la consulta.
  */
-async function semanticSearch(query: string) {
+async function semanticSearch(query: string, tagsFilter?: string[]) {
     try {
         const pc = getPinecone()
         const index = pc.index(process.env.PINECONE_INDEX || "promptcontent")
-        let vector: number[]
+        const { OpenAI } = await import("openai")
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+        const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query })
+        const vector = emb.data[0].embedding as any
 
-        // Intento normal con OpenAI
-        try {
-            const { OpenAI } = await import("openai")
-            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-            const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query })
-            vector = emb.data[0].embedding as any
-        } catch {
-            // Fallback determinista si no hay OpenAI
-            /**
-             * Genera un vector numérico pseudoaleatorio a partir de un texto.
-             *
-             * @param {string} text Texto de entrada.
-             * @param {number} [dim=1536] Dimensión del embedding simulado.
-             * @returns {number[]} Vector de números en [0, 1).
-             */
-            function pseudoEmbedding(text: string, dim = 1536) {
-                let h = 2166136261
-                for (let i = 0; i < text.length; i++) h = (h ^ text.charCodeAt(i)) * 16777619
-                const out = new Array(dim)
-                let x = h >>> 0
-                for (let i = 0; i < dim; i++) {
-                    x ^= x << 13
-                    x ^= x >>> 17
-                    x ^= x << 5
-                    out[i] = (x % 1000) / 1000
-                }
-                return out
-            }
-            vector = pseudoEmbedding(query)
+        const q: any = { vector, topK: 5, includeMetadata: true }
+        if (tagsFilter && tagsFilter.length > 0) {
+            q.filter = { tags: { $in: tagsFilter } }
         }
-
-        const res = await index.query({ vector, topK: 5, includeMetadata: true })
+        const res = await index.query(q)
         return (res.matches || []).map(m => ({
             url: (m.metadata as any).url,
             alt: (m.metadata as any).alt,
@@ -216,7 +179,7 @@ async function semanticSearch(query: string) {
             score: typeof (m as any).score === "number" ? (m as any).score : undefined
         }))
     } catch {
-        return mockImages(query)
+        return []
     }
 }
 
@@ -287,59 +250,55 @@ export function createPromptContentServer() {
          *          Respuesta MCP con contenido serializado y estructurado.
          */
         async ({ descripcion }) => {
-            let images: { url: string; alt?: string; score?: number; tags?: string[] }[] = []
+            let images: { url: string; alt?: string; score?: number; tags?: string[] }[] = [];
+            const explicitHashtags = (descripcion.match(/#[a-zA-Z0-9_]+/g) || []).map(h => h.toLowerCase());
+            const explicitTokens = explicitHashtags.map(toTagToken);
 
             try {
                 const db = await getDb()
                 const imagesCol = db.collection("images")
+                // Query: búsqueda por texto y filtro opcional por hashtags
+                const results = await imagesCol
+                    .find(
+                        { $and: [{ $text: { $search: descripcion } }, ...(explicitTokens.length > 0 ? [{ tags: { $in: explicitTokens } }] : [])] },
+                        { projection: { score: { $meta: "textScore" } } }
+                    )
+                    .sort({ score: { $meta: "textScore" } })
+                    .limit(8)
+                    .toArray()
 
-                try {
-                    const results = await imagesCol
-                        .find(
-                            { $text: { $search: descripcion } },
-                            { projection: { score: { $meta: "textScore" } } }
-                        )
-                        .sort({ score: { $meta: "textScore" } })
-                        .limit(8)
-                        .toArray()
-
-                    images = results.map((doc: any) => ({
-                        url: doc.url,
-                        alt: doc.alt,
-                        score: doc.score,
-                        tags: doc.tags
-                    }))
-                } catch {
-                    const regex = new RegExp(descripcion.split(/\s+/).join("|"), "i")
-                    const fallback = await imagesCol
-                        .find({ $or: [{ title: regex }, { alt: regex }, { tags: regex }] })
-                        .limit(8)
-                        .toArray()
-                    images = fallback.map((doc: any) => ({
-                        url: doc.url,
-                        alt: doc.alt,
-                        score: undefined,
-                        tags: doc.tags
-                    }))
-                }
+                images = results.map((doc: any) => ({
+                    url: doc.url,
+                    alt: doc.alt,
+                    score: doc.score,
+                    tags: doc.tags
+                }))
 
                 if (images.length === 0) {
-                    images = await semanticSearch(descripcion)
+                    const enhancedQuery = descripcion + (explicitHashtags.length > 0 ? " hashtags: " + explicitHashtags.join(", ") : "");
+                    images = await semanticSearch(enhancedQuery, explicitTokens);
                 }
+                // Filtro post-búsqueda para priorizar coincidencias con hashtags
+                images = images.filter(img => {
+                    if (explicitTokens.length === 0) return true;
+                    const imgTokens = (img.tags || []).map(t => t.toLowerCase());
+                    return explicitTokens.some(tok => imgTokens.includes(tok));
+                });
             } catch {
-                images = mockImages(descripcion)
+                images = []
             }
 
-            if (images.length < 3) {
-                const extras = mockImages(descripcion)
-                const need = 3 - images.length
-                images = [...images, ...extras.slice(0, need)]
+            // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
+            if (explicitTokens.length > 0) {
+                images = images.map((img, idx) => {
+                    const themed = themedImageUrl(explicitTokens, idx)
+                    return { ...img, url: themed || img.url }
+                })
             }
-
             // Sanear URLs por si vienen con espacios/backticks
             images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }))
 
-            const hashtagsBase = extractHashtags(descripcion)
+            const hashtagsBase = extractHashtags(descripcion) // Extraer hashtags de la descripción
             const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(t => normalizeHashtag(t))
             let hashtags = Array.from(new Set([...hashtagsBase, ...hashtagsFromImages])).slice(0, 15)
             if (hashtags.length === 0) {
@@ -732,7 +691,7 @@ export function createPromptContentServer() {
     return server
 }
 
-;(async () => {
+; (async () => {
     if (process.env.RUN_AS_MCP_STDIO !== "0") {
         const server = createPromptContentServer()
         const transport = new StdioServerTransport()

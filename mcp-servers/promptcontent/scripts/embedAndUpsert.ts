@@ -79,7 +79,8 @@ async function main() {
     const vectors: { id: string; values: number[]; metadata: any }[] = []
     for (const doc of batch) {
       try {
-        const values = await generateEmbedding(doc.alt)
+        const text = `${doc.alt || ''} ${doc.title || ''} tags: ${(doc.tags || []).join(', ')}`.trim()
+        const values = await generateEmbedding(text)
         vectors.push({ id: doc._id.toString(), values, metadata: { url: doc.url, title: doc.title, tags: doc.tags, alt: doc.alt } })
       } catch {}
     }

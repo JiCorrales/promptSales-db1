@@ -102,7 +102,8 @@ if (phrases.length > 0) {
     const tags = tagsFromPhrase(p)
     const desc = descriptionFromPhrase(p)
     const seed = Math.abs(hashCode(p + ":" + i))
-    const url = `https://picsum.photos/seed/${seed}/800/600`
+    const q = encodeURIComponent(tags.slice(0, 3).join(","))
+    const url = `https://loremflickr.com/800/600/${q}?random=${i}`
     docs.push({
       url,
       title: p.slice(0, 120),
@@ -119,7 +120,8 @@ for (let i = 0; i < remaining; i++) {
   const theme = randomPick(THEMES)
   const tags = generateTags(theme)
   const desc = generateDescription(theme)
-  const url = `https://picsum.photos/seed/${randomUUID()}/800/600`
+  const q2 = encodeURIComponent(tags.slice(0, 3).join(","))
+  const url = `https://loremflickr.com/800/600/${q2}?random=${i}`
   docs.push({
     url,
     title: `${theme} ${randomPick(["vista", "perspectiva", "escena", "vista panorámica", "detalle", "composición"])}`,

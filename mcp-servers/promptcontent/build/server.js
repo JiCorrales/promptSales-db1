@@ -1,4 +1,11 @@
 "use strict";
+/**
+ * @file MCP server para PromptContent.
+ * @description Expone herramientas MCP para:
+ *  - Búsqueda de imágenes (MongoDB + Pinecone/OpenAI o mock).
+ *  - Búsqueda de música en Spotify.
+ *  - Generación de campañas de marketing con segmentación, calendario y métricas.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -12,9 +19,31 @@ const mongodb_1 = require("mongodb");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const pinecone_1 = require("@pinecone-database/pinecone");
 const spotify_1 = require("./spotify");
+/**
+ * Cliente global de MongoDB reutilizable.
+ * @type {MongoClient | null}
+ */
 let mongoClient = null;
+/**
+ * Instancia global de base de datos MongoDB reutilizable.
+ * @type {Db | null}
+ */
 let mongoDb = null;
+/**
+ * Cliente global de Pinecone reutilizable.
+ * @type {Pinecone | null}
+ */
 let pineconeClient = null;
+/**
+ * Obtiene (y cachea) la instancia de base de datos MongoDB.
+ *
+ * Usa las variables de entorno:
+ * - `MONGODB_URI` (opcional, por defecto `mongodb://127.0.0.1:27017`)
+ * - `MONGODB_DB` (opcional, por defecto `promptcontent`)
+ *
+ * @async
+ * @returns {Promise<Db>} Instancia de la base de datos de MongoDB.
+ */
 async function getDb() {
     if (mongoDb)
         return mongoDb;
@@ -23,6 +52,15 @@ async function getDb() {
     mongoDb = mongoClient.db(process.env.MONGODB_DB || "promptcontent");
     return mongoDb;
 }
+/**
+ * Obtiene (y cachea) el cliente de Pinecone.
+ *
+ * Requiere la variable de entorno:
+ * - `PINECONE_API_KEY`
+ *
+ * @throws {Error} Si `PINECONE_API_KEY` no está configurada.
+ * @returns {Pinecone} Cliente de Pinecone inicializado.
+ */
 function getPinecone() {
     if (!pineconeClient) {
         const key = process.env.PINECONE_API_KEY;
@@ -32,13 +70,54 @@ function getPinecone() {
     }
     return pineconeClient;
 }
+/**
+ * Normaliza una cadena para convertirla en hashtag.
+ *
+ * - Elimina espacios al inicio/fin.
+ * - Reemplaza espacios internos por guiones bajos.
+ * - Elimina caracteres no alfanuméricos (excepto `_`).
+ * - Convierte a minúsculas.
+ * - Asegura que comience con `#`.
+ *
+ * @param {string} t Texto a normalizar.
+ * @returns {string} Hashtag normalizado (ej: `#contenido_marketing`).
+ */
 function normalizeHashtag(t) {
     const cleaned = t.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`;
 }
+function toTagToken(t) {
+    return t.replace(/^#/, "").toLowerCase();
+}
+/**
+ * Elimina espacios y backticks al inicio y al final de una URL.
+ *
+ * @param {string} u URL potencialmente "sucia".
+ * @returns {string} URL saneada.
+ */
 function sanitizeUrl(u) {
     return (u || "").replace(/^[\s`]+|[\s`]+$/g, "");
 }
+function themedImageUrl(tokens, i) {
+    const q = tokens
+        .filter(Boolean)
+        .map(t => encodeURIComponent(toTagToken(t)))
+        .slice(0, 3)
+        .join(",");
+    return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : "";
+}
+/**
+ * The function `extractHashtags` takes a string of text, extracts words excluding common stop words,
+ * filters out short words, and returns up to 15 unique hashtags in lowercase format.
+ * @param {string} text - The function `extractHashtags` takes a string `text` as input and extracts
+ * hashtags from it. It first converts the text to lowercase, splits it into tokens based on
+ * non-alphanumeric characters, filters out common stop words, and keeps words longer than 2
+ * characters. It then removes duplicates and
+ * @returns The function `extractHashtags` takes a string of text as input, extracts words from the
+ * text, filters out common stop words, and returns an array of unique hashtags (words longer than 2
+ * characters) with a maximum of 15 hashtags. Each hashtag is normalized using the `normalizeHashtag`
+ * function before being returned.
+ */
 function extractHashtags(text) {
     const lower = text.toLowerCase();
     const tokens = lower.split(/[^a-z0-9áéíóúñ]+/i).filter(Boolean);
@@ -47,52 +126,40 @@ function extractHashtags(text) {
     const unique = Array.from(new Set(words));
     return unique.slice(0, 15).map(w => normalizeHashtag(w));
 }
-function hashCode(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++)
-        h = (h << 5) - h + str.charCodeAt(i);
-    return h | 0;
-}
-function mockImages(seed) {
-    const base = Math.abs(hashCode(seed));
-    const arr = [];
-    for (let i = 0; i < 5; i++) {
-        const s = base + i;
-        arr.push({ url: `https://picsum.photos/seed/${s}/800/600`, alt: `image-${s}` });
-    }
-    return arr;
-}
-async function semanticSearch(query) {
+/**
+ * @typedef {Object} ImageResult
+ * @property {string} url URL de la imagen.
+ * @property {string} [alt] Texto alternativo de la imagen.
+ * @property {number} [score] Puntaje de relevancia (si aplica).
+ * @property {string[]} [tags] Etiquetas asociadas a la imagen.
+ */
+/**
+ * Realiza una búsqueda semántica de imágenes usando Pinecone.
+ *
+ * Flujo:
+ * 1. Intenta crear un embedding con OpenAI (modelo `text-embedding-3-small`).
+ * 2. Si falla, usa un "pseudo-embedding" determinista como fallback.
+ * 3. Consulta el índice Pinecone definido en `PINECONE_INDEX` (o `promptcontent` por defecto).
+ * 4. Retorna hasta 5 coincidencias con metadatos.
+ * 5. Si todo falla (error general), retorna imágenes mock.
+ *
+ * @async
+ * @param {string} query Texto de búsqueda semántica.
+ * @returns {Promise<ImageResult[]>} Lista de imágenes similares a la consulta.
+ */
+async function semanticSearch(query, tagsFilter) {
     try {
         const pc = getPinecone();
         const index = pc.index(process.env.PINECONE_INDEX || "promptcontent");
-        let vector;
-        // Intento normal con OpenAI
-        try {
-            const { OpenAI } = await import("openai");
-            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-            const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
-            vector = emb.data[0].embedding;
+        const { OpenAI } = await import("openai");
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
+        const vector = emb.data[0].embedding;
+        const q = { vector, topK: 5, includeMetadata: true };
+        if (tagsFilter && tagsFilter.length > 0) {
+            q.filter = { tags: { $in: tagsFilter } };
         }
-        catch {
-            // Fallback determinista si no hay OpenAI
-            function pseudoEmbedding(text, dim = 1536) {
-                let h = 2166136261;
-                for (let i = 0; i < text.length; i++)
-                    h = (h ^ text.charCodeAt(i)) * 16777619;
-                const out = new Array(dim);
-                let x = h >>> 0;
-                for (let i = 0; i < dim; i++) {
-                    x ^= x << 13;
-                    x ^= x >>> 17;
-                    x ^= x << 5;
-                    out[i] = (x % 1000) / 1000;
-                }
-                return out;
-            }
-            vector = pseudoEmbedding(query);
-        }
-        const res = await index.query({ vector, topK: 5, includeMetadata: true });
+        const res = await index.query(q);
         return (res.matches || []).map(m => ({
             url: m.metadata.url,
             alt: m.metadata.alt,
@@ -101,12 +168,30 @@ async function semanticSearch(query) {
         }));
     }
     catch {
-        return mockImages(query);
+        return [];
     }
 }
 /**
- * 🔹 Esta función se importa desde api/mcp.ts
- *    y crea un McpServer nuevo con todas las tools registradas.
+ * Crea y configura una instancia de `McpServer` con todas las tools
+ * disponibles para PromptContent.
+ *
+ * Tools registradas:
+ *
+ * 1. **getContent**
+ *    - Busca imágenes relacionadas con una descripción textual.
+ *    - Usa MongoDB (búsqueda full-text / regex) y, si es necesario, `semanticSearch`.
+ *    - Retorna imágenes + hashtags sugeridos.
+ *
+ * 2. **searchMusic**
+ *    - Busca pistas en Spotify según un `query`.
+ *    - Usa la función `searchTrack` importada.
+ *
+ * 3. **createCampaign**
+ *    - Genera una campaña de marketing a partir de una descripción detallada.
+ *    - Construye bitácora, segmentos, calendario, métricas y recomendaciones.
+ *    - Intenta persistir logs en MongoDB (`CampaignLogs` y `AIRequests`).
+ *
+ * @returns {McpServer} Servidor MCP listo para conectarse a un transporte.
  */
 function createPromptContentServer() {
     const server = new mcp_js_1.McpServer({
@@ -130,48 +215,62 @@ function createPromptContentServer() {
             })),
             hashtags: zod_1.z.array(zod_1.z.string())
         }
-    }, async ({ descripcion }) => {
+    }, 
+    /**
+     * Handler de la tool `getContent`.
+     *
+     * Flujo:
+     * 1. Intenta buscar en MongoDB usando índice de texto.
+     * 2. Si falla, hace fallback a búsqueda por regex.
+     * 3. Si no hay resultados, usa `semanticSearch`.
+     * 4. Si aún hay pocos resultados, completa con `mockImages`.
+     * 5. Sanea URLs y construye hashtags a partir de descripción e imágenes.
+     *
+     * @async
+     * @param {{ descripcion: string }} params Objeto de parámetros de entrada.
+     * @param {string} params.descripcion Descripción textual para buscar imágenes.
+     * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: { images: ImageResult[]; hashtags: string[] } }>}
+     *          Respuesta MCP con contenido serializado y estructurado.
+     */
+    async ({ descripcion }) => {
         let images = [];
+        const explicitHashtags = (descripcion.match(/#[a-zA-Z0-9_]+/g) || []).map(h => h.toLowerCase());
+        const explicitTokens = explicitHashtags.map(toTagToken);
         try {
             const db = await getDb();
             const imagesCol = db.collection("images");
-            try {
-                const results = await imagesCol
-                    .find({ $text: { $search: descripcion } }, { projection: { score: { $meta: "textScore" } } })
-                    .sort({ score: { $meta: "textScore" } })
-                    .limit(8)
-                    .toArray();
-                images = results.map((doc) => ({
-                    url: doc.url,
-                    alt: doc.alt,
-                    score: doc.score,
-                    tags: doc.tags
-                }));
-            }
-            catch {
-                const regex = new RegExp(descripcion.split(/\s+/).join("|"), "i");
-                const fallback = await imagesCol
-                    .find({ $or: [{ title: regex }, { alt: regex }, { tags: regex }] })
-                    .limit(8)
-                    .toArray();
-                images = fallback.map((doc) => ({
-                    url: doc.url,
-                    alt: doc.alt,
-                    score: undefined,
-                    tags: doc.tags
-                }));
-            }
+            const results = await imagesCol
+                .find({ $and: [{ $text: { $search: descripcion } }, ...(explicitTokens.length > 0 ? [{ tags: { $in: explicitTokens } }] : [])] }, { projection: { score: { $meta: "textScore" } } })
+                .sort({ score: { $meta: "textScore" } })
+                .limit(8)
+                .toArray();
+            images = results.map((doc) => ({
+                url: doc.url,
+                alt: doc.alt,
+                score: doc.score,
+                tags: doc.tags
+            }));
             if (images.length === 0) {
-                images = await semanticSearch(descripcion);
+                const enhancedQuery = descripcion + (explicitHashtags.length > 0 ? " hashtags: " + explicitHashtags.join(", ") : "");
+                images = await semanticSearch(enhancedQuery, explicitTokens);
             }
+            // Filtro post-búsqueda para priorizar coincidencias con hashtags
+            images = images.filter(img => {
+                if (explicitTokens.length === 0)
+                    return true;
+                const imgTokens = (img.tags || []).map(t => t.toLowerCase());
+                return explicitTokens.some(tok => imgTokens.includes(tok));
+            });
         }
         catch {
-            images = mockImages(descripcion);
+            images = [];
         }
-        if (images.length < 3) {
-            const extras = mockImages(descripcion);
-            const need = 3 - images.length;
-            images = [...images, ...extras.slice(0, need)];
+        // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
+        if (explicitTokens.length > 0) {
+            images = images.map((img, idx) => {
+                const themed = themedImageUrl(explicitTokens, idx);
+                return { ...img, url: themed || img.url };
+            });
         }
         // Sanear URLs por si vienen con espacios/backticks
         images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }));
@@ -203,7 +302,21 @@ function createPromptContentServer() {
                 url: zod_1.z.string()
             }))
         }
-    }, async ({ query, limit = 5 }) => {
+    }, 
+    /**
+     * Handler de la tool `searchMusic`.
+     *
+     * Llama a `searchTrack` para obtener pistas desde Spotify
+     * y retorna la lista formateada para MCP.
+     *
+     * @async
+     * @param {{ query: string; limit?: number }} params Parámetros de entrada.
+     * @param {string} params.query Palabras clave para la búsqueda.
+     * @param {number} [params.limit=5] Máximo de pistas a retornar (1–10).
+     * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: { tracks: any[] } }>}
+     *          Respuesta MCP con pistas encontradas.
+     */
+    async ({ query, limit = 5 }) => {
         const tracks = await (0, spotify_1.searchTrack)(query, limit);
         const output = { tracks };
         return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
@@ -267,7 +380,35 @@ function createPromptContentServer() {
             }),
             recomendaciones: zod_1.z.array(zod_1.z.string())
         }
-    }, async ({ descripcion, publico, duracion = "1 mes", presupuesto = 5000 }) => {
+    }, 
+    /**
+     * Handler de la tool `createCampaign`.
+     *
+     * A partir de la descripción de la campaña y los datos de público:
+     * - Genera un ID de campaña.
+     * - Construye una bitácora con resumen, objetivos y estrategia.
+     * - Define segmentos con mensajes personalizados (awareness / consideration / conversion).
+     * - Crea un calendario semanal de publicaciones por plataforma y objetivo.
+     * - Estima métricas de alcance, engagement, conversión y ROI.
+     * - Intenta persistir logs en colecciones `CampaignLogs` y `AIRequests` de MongoDB (sin romper la respuesta en caso de error).
+     *
+     * @async
+     * @param {{
+     *   descripcion: string;
+     *   publico: {
+     *     edad?: { min: number; max: number };
+     *     intereses?: string[];
+     *     ubicaciones?: string[];
+     *     genero?: "masculino" | "femenino" | "mixto";
+     *     nivelSocioeconomico?: "bajo" | "medio" | "alto" | "mixto";
+     *   };
+     *   duracion?: "1 semana" | "2 semanas" | "1 mes" | "3 meses";
+     *   presupuesto?: number;
+     * }} params Parámetros de entrada para la generación de campaña.
+     * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: any }>}
+     *          Respuesta MCP con la campaña generada.
+     */
+    async ({ descripcion, publico, duracion = "1 mes", presupuesto = 5000 }) => {
         const id = `campaign_${Date.now()}`;
         const edadMin = publico.edad?.min || 18;
         const edadMax = publico.edad?.max || 65;
@@ -454,6 +595,7 @@ function createPromptContentServer() {
     });
     return server;
 }
+;
 (async () => {
     if (process.env.RUN_AS_MCP_STDIO !== "0") {
         const server = createPromptContentServer();
