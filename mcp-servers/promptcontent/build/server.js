@@ -89,6 +89,110 @@ function normalizeHashtag(t) {
 function toTagToken(t) {
     return t.replace(/^#/, "").toLowerCase();
 }
+function stripAccents(s) {
+    return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function toEnglishToken(t) {
+    const lower = t.replace(/^#/, "").trim().toLowerCase().replace(/_/g, " ");
+    const base = stripAccents(lower);
+    const dict = {
+        "contenido": "content",
+        "marketing": "marketing",
+        "campana": "campaign",
+        "campañas": "campaigns",
+        "campanas": "campaigns",
+        "producto": "product",
+        "productos": "products",
+        "servicio": "service",
+        "servicios": "services",
+        "marca": "brand",
+        "marcas": "brands",
+        "ventas": "sales",
+        "promocion": "promotion",
+        "promoción": "promotion",
+        "promociones": "promotions",
+        "publicidad": "advertising",
+        "oferta": "offer",
+        "ofertas": "offers",
+        "cliente": "customer",
+        "clientes": "customers",
+        "usuario": "user",
+        "usuarios": "users",
+        "precio": "price",
+        "negocio": "business",
+        "tecnologia": "technology",
+        "tecnología": "technology",
+        "moda": "fashion",
+        "viajes": "travel",
+        "estilo": "style",
+        "vida": "life",
+        "familia": "family",
+        "profesional": "professional",
+        "profesionales": "professionals",
+        "jóvenes": "young",
+        "jovenes": "young",
+        "adultos": "adults",
+        "conciencia": "awareness",
+        "consideracion": "consideration",
+        "consideración": "consideration",
+        "conversion": "conversion",
+        "estrategia": "strategy",
+        "objetivo": "goal",
+        "objetivos": "goals",
+        "calendario": "schedule",
+        "plataforma": "platform",
+        "imagen": "image",
+        "imagenes": "images",
+        "imágenes": "images",
+        "video": "video",
+        "carrusel": "carousel",
+        "historia": "story",
+        "reel": "reel",
+        "alcance": "reach",
+        "engagement": "engagement",
+        "audiencia": "audience",
+        "creatividad": "creativity",
+        "calidad": "quality",
+        "excelencia": "excellence",
+        "comparativa": "comparison",
+        "beneficios": "benefits",
+        "beneficio": "benefit",
+        "comunidad": "community",
+        "urgencia": "urgency",
+        "moderno": "modern",
+        "aspiracional": "aspirational",
+        "cálido": "warm",
+        "calido": "warm",
+        "confiable": "reliable",
+        "emocional": "emotional",
+        "premium": "premium",
+        "estilo de vida": "lifestyle"
+    };
+    const direct = dict[base];
+    if (direct)
+        return direct;
+    let guess = base;
+    if (guess.endsWith("ción"))
+        guess = guess.slice(0, -4) + "tion";
+    if (guess.endsWith("cion"))
+        guess = guess.slice(0, -4) + "tion";
+    if (guess.endsWith("ciones"))
+        guess = guess.slice(0, -6) + "tions";
+    if (guess.endsWith("ización"))
+        guess = guess.slice(0, -8) + "ization";
+    if (guess.endsWith("izacion"))
+        guess = guess.slice(0, -8) + "ization";
+    if (guess.endsWith("idad"))
+        guess = guess.slice(0, -4) + "ity";
+    if (guess.endsWith("ico"))
+        guess = guess.slice(0, -3) + "ic";
+    return guess;
+}
+function toEnglishHashtag(t) {
+    const token = toEnglishToken(t);
+    const normalized = token.replace(/\s+/g, "_");
+    return normalizeHashtag(normalized);
+}
 /**
  * Elimina espacios y backticks al inicio y al final de una URL.
  *
@@ -98,12 +202,28 @@ function toTagToken(t) {
 function sanitizeUrl(u) {
     return (u || "").replace(/^[\s`]+|[\s`]+$/g, "");
 }
+/**
+ * The function `themedImageUrl` generates a themed image URL using input tokens and an index number.
+ * @param {string[]} tokens - An array of strings containing keywords or tags for the image search.
+ * @param {number} i - The `i` parameter in the `themedImageUrl` function is used as a unique
+ * identifier to generate a random query parameter in the URL. This helps in ensuring that each
+ * generated URL is unique, even if the same set of tokens is used.
+ * @returns The function `themedImageUrl` returns a URL string that includes the tokens passed as
+ * arguments, encoded and formatted as query parameters. The URL is constructed using the
+ * `loremflickr.com` API to generate a themed image with the specified tokens and a random query
+ * parameter. If the query string is empty, an empty string is returned.
+ */
 function themedImageUrl(tokens, i) {
-    const q = tokens
-        .filter(Boolean)
-        .map(t => encodeURIComponent(toTagToken(t)))
-        .slice(0, 3)
-        .join(",");
+    const toks = tokens.filter(Boolean).map(t => toEnglishToken(toTagToken(t)));
+    const pool = Array.from(new Set(toks));
+    const pick = [];
+    while (pick.length < Math.min(3, pool.length)) {
+        const j = Math.floor(Math.random() * pool.length);
+        const val = pool[j];
+        if (!pick.includes(val))
+            pick.push(val);
+    }
+    const q = pick.map(t => encodeURIComponent(t)).join(",");
     return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : "";
 }
 /**
@@ -121,10 +241,33 @@ function themedImageUrl(tokens, i) {
 function extractHashtags(text) {
     const lower = text.toLowerCase();
     const tokens = lower.split(/[^a-z0-9áéíóúñ]+/i).filter(Boolean);
-    const stop = new Set(["de", "la", "el", "en", "y", "para", "por", "con", "del", "las", "los", "un", "una", "al", "que", "se"]);
+    const stop = new Set(["de", "la", "el", "en", "y", "para", "por", "con", "del", "las", "los", "un", "una", "al", "que", "se", "the", "a", "an", "and", "or", "to", "for", "with", "of", "in", "on", "by", "at", "is", "are"]);
     const words = tokens.filter(t => !stop.has(t) && t.length > 2);
     const unique = Array.from(new Set(words));
     return unique.slice(0, 15).map(w => normalizeHashtag(w));
+}
+async function translateToEnglish(text) {
+    try {
+        const { OpenAI } = await import("openai");
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const resp = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "Translate input to English. Return only the translation." },
+                { role: "user", content: text }
+            ]
+        });
+        const out = resp.choices?.[0]?.message?.content || "";
+        return out.trim();
+    }
+    catch {
+        return stripAccents(text);
+    }
+}
+function isSpanish(text) {
+    const accents = /[áéíóúñ]/i.test(text);
+    const sw = /(\bde\b|\bla\b|\bel\b|\ben\b|\by\b|\bpara\b|\bpor\b|\bcon\b|\bdel\b|\blas\b|\blos\b|\bun\b|\buna\b|\bal\b|\bque\b|\bse\b)/i.test(text);
+    return accents || sw;
 }
 /**
  * @typedef {Object} ImageResult
@@ -234,15 +377,37 @@ function createPromptContentServer() {
      */
     async ({ descripcion }) => {
         let images = [];
-        const explicitHashtags = (descripcion.match(/#[a-zA-Z0-9_]+/g) || []).map(h => h.toLowerCase());
+        const originalText = descripcion;
+        let searchText = originalText;
+        let didTranslate = false;
+        if (isSpanish(originalText)) {
+            searchText = await translateToEnglish(originalText);
+            didTranslate = true;
+            try {
+                const db = await getDb();
+                await db.collection("AIRequests").insertOne({
+                    aiRequestId: `translation_${Date.now()}`,
+                    createdAt: new Date(),
+                    completedAt: new Date(),
+                    status: "completed",
+                    type: "translation",
+                    prompt: originalText,
+                    output: searchText
+                });
+            }
+            catch { }
+        }
+        const explicitHashtags = (originalText.match(/#[\p{L}\p{N}_]+/gu) || []).map(h => h.toLowerCase());
         const explicitTokens = explicitHashtags.map(toTagToken);
+        const explicitTokensEn = explicitTokens.map(toEnglishToken);
         try {
             const db = await getDb();
             const imagesCol = db.collection("images");
+            // Query: búsqueda por texto y filtro opcional por hashtags
             const results = await imagesCol
-                .find({ $and: [{ $text: { $search: descripcion } }, ...(explicitTokens.length > 0 ? [{ tags: { $in: explicitTokens } }] : [])] }, { projection: { score: { $meta: "textScore" } } })
+                .find({ $and: [{ $text: { $search: searchText } }, ...(explicitTokensEn.length > 0 ? [{ tags: { $in: explicitTokensEn } }] : [])] }, { projection: { score: { $meta: "textScore" } } })
                 .sort({ score: { $meta: "textScore" } })
-                .limit(8)
+                .limit(4)
                 .toArray();
             images = results.map((doc) => ({
                 url: doc.url,
@@ -251,34 +416,38 @@ function createPromptContentServer() {
                 tags: doc.tags
             }));
             if (images.length === 0) {
-                const enhancedQuery = descripcion + (explicitHashtags.length > 0 ? " hashtags: " + explicitHashtags.join(", ") : "");
-                images = await semanticSearch(enhancedQuery, explicitTokens);
+                const enhancedQuery = searchText + (explicitTokensEn.length > 0 ? " hashtags: " + explicitTokensEn.join(", ") : "");
+                images = await semanticSearch(enhancedQuery, explicitTokensEn);
             }
             // Filtro post-búsqueda para priorizar coincidencias con hashtags
             images = images.filter(img => {
-                if (explicitTokens.length === 0)
+                if (explicitTokensEn.length === 0)
                     return true;
                 const imgTokens = (img.tags || []).map(t => t.toLowerCase());
-                return explicitTokens.some(tok => imgTokens.includes(tok));
+                return explicitTokensEn.some(tok => imgTokens.includes(tok));
             });
         }
         catch {
             images = [];
         }
         // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
-        if (explicitTokens.length > 0) {
+        if (explicitTokensEn.length > 0) {
             images = images.map((img, idx) => {
-                const themed = themedImageUrl(explicitTokens, idx);
+                const themed = themedImageUrl(explicitTokensEn, idx);
                 return { ...img, url: themed || img.url };
             });
         }
         // Sanear URLs por si vienen con espacios/backticks
         images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }));
-        const hashtagsBase = extractHashtags(descripcion);
-        const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(t => normalizeHashtag(t));
-        let hashtags = Array.from(new Set([...hashtagsBase, ...hashtagsFromImages])).slice(0, 15);
+        const hashtagsBase = extractHashtags(searchText).map(toEnglishHashtag);
+        const hashtagsExplicit = explicitHashtags.map(toEnglishHashtag);
+        const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(toEnglishHashtag);
+        let hashtags = Array.from(new Set([...hashtagsBase, ...hashtagsExplicit, ...hashtagsFromImages])).slice(0, 15);
+        if (hashtags.some(h => /[áéíóúñ]/i.test(h))) {
+            hashtags = hashtags.map(toEnglishHashtag);
+        }
         if (hashtags.length === 0) {
-            hashtags = ["#marketing", "#contenido", "#campaña"];
+            hashtags = ["#marketing", "#content", "#campaign"];
         }
         const output = { images, hashtags };
         return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
