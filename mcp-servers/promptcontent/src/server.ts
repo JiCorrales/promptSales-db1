@@ -1,3 +1,11 @@
+/** 
+ * @file MCP server para PromptContent.
+ * @description Expone herramientas MCP para:
+ *  - Búsqueda de imágenes (MongoDB + Pinecone/OpenAI o mock).
+ *  - Búsqueda de música en Spotify.
+ *  - Generación de campañas de marketing con segmentación, calendario y métricas.
+ */
+
 import dotenv from "dotenv"
 dotenv.config()
 
@@ -8,10 +16,34 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { Pinecone } from "@pinecone-database/pinecone"
 import { searchTrack } from "./spotify"
 
+/**
+ * Cliente global de MongoDB reutilizable.
+ * @type {MongoClient | null}
+ */
 let mongoClient: MongoClient | null = null
+
+/**
+ * Instancia global de base de datos MongoDB reutilizable.
+ * @type {Db | null}
+ */
 let mongoDb: Db | null = null
+
+/**
+ * Cliente global de Pinecone reutilizable.
+ * @type {Pinecone | null}
+ */
 let pineconeClient: Pinecone | null = null
 
+/**
+ * Obtiene (y cachea) la instancia de base de datos MongoDB.
+ *
+ * Usa las variables de entorno:
+ * - `MONGODB_URI` (opcional, por defecto `mongodb://127.0.0.1:27017`)
+ * - `MONGODB_DB` (opcional, por defecto `promptcontent`)
+ *
+ * @async
+ * @returns {Promise<Db>} Instancia de la base de datos de MongoDB.
+ */
 async function getDb() {
     if (mongoDb) return mongoDb
     const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017"
@@ -20,6 +52,15 @@ async function getDb() {
     return mongoDb
 }
 
+/**
+ * Obtiene (y cachea) el cliente de Pinecone.
+ *
+ * Requiere la variable de entorno:
+ * - `PINECONE_API_KEY`
+ *
+ * @throws {Error} Si `PINECONE_API_KEY` no está configurada.
+ * @returns {Pinecone} Cliente de Pinecone inicializado.
+ */
 function getPinecone() {
     if (!pineconeClient) {
         const key = process.env.PINECONE_API_KEY
@@ -29,15 +70,46 @@ function getPinecone() {
     return pineconeClient
 }
 
+/**
+ * Normaliza una cadena para convertirla en hashtag.
+ *
+ * - Elimina espacios al inicio/fin.
+ * - Reemplaza espacios internos por guiones bajos.
+ * - Elimina caracteres no alfanuméricos (excepto `_`).
+ * - Convierte a minúsculas.
+ * - Asegura que comience con `#`.
+ *
+ * @param {string} t Texto a normalizar.
+ * @returns {string} Hashtag normalizado (ej: `#contenido_marketing`).
+ */
 function normalizeHashtag(t: string) {
     const cleaned = t.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`
 }
 
+/**
+ * Elimina espacios y backticks al inicio y al final de una URL.
+ *
+ * @param {string} u URL potencialmente "sucia".
+ * @returns {string} URL saneada.
+ */
 function sanitizeUrl(u: string) {
     return (u || "").replace(/^[\s`]+|[\s`]+$/g, "")
 }
 
+/**
+ * Extrae hashtags a partir de un texto en español.
+ *
+ * - Convierte a minúsculas.
+ * - Separa por caracteres no alfanuméricos.
+ * - Elimina palabras vacías (stopwords) comunes en español.
+ * - Filtra palabras de longitud mayor a 2.
+ * - Genera hashtags normalizados.
+ * - Limita a 15 hashtags.
+ *
+ * @param {string} text Texto de entrada.
+ * @returns {string[]} Lista de hashtags sugeridos.
+ */
 function extractHashtags(text: string) {
     const lower = text.toLowerCase()
     const tokens = lower.split(/[^a-z0-9áéíóúñ]+/i).filter(Boolean)
@@ -47,12 +119,34 @@ function extractHashtags(text: string) {
     return unique.slice(0, 15).map(w => normalizeHashtag(w))
 }
 
+/**
+ * Calcula un hash entero a partir de una cadena (similar a Java).
+ *
+ * @param {string} str Cadena de entrada.
+ * @returns {number} Hash entero con signo.
+ */
 function hashCode(str: string) {
     let h = 0
     for (let i = 0; i < str.length; i++) h = (h << 5) - h + str.charCodeAt(i)
     return h | 0
 }
 
+/**
+ * @typedef {Object} ImageResult
+ * @property {string} url URL de la imagen.
+ * @property {string} [alt] Texto alternativo de la imagen.
+ * @property {number} [score] Puntaje de relevancia (si aplica).
+ * @property {string[]} [tags] Etiquetas asociadas a la imagen.
+ */
+
+/**
+ * Genera un conjunto determinista de imágenes mock a partir de una semilla.
+ *
+ * Se usa como fallback cuando no hay acceso a Pinecone/Mongo/OpenAI.
+ *
+ * @param {string} seed Semilla para la generación determinista.
+ * @returns {ImageResult[]} Arreglo de imágenes de prueba.
+ */
 function mockImages(seed: string) {
     const base = Math.abs(hashCode(seed))
     const arr: { url: string; alt?: string; tags?: string[] }[] = []
@@ -63,6 +157,20 @@ function mockImages(seed: string) {
     return arr
 }
 
+/**
+ * Realiza una búsqueda semántica de imágenes usando Pinecone.
+ *
+ * Flujo:
+ * 1. Intenta crear un embedding con OpenAI (modelo `text-embedding-3-small`).
+ * 2. Si falla, usa un "pseudo-embedding" determinista como fallback.
+ * 3. Consulta el índice Pinecone definido en `PINECONE_INDEX` (o `promptcontent` por defecto).
+ * 4. Retorna hasta 5 coincidencias con metadatos.
+ * 5. Si todo falla (error general), retorna imágenes mock.
+ *
+ * @async
+ * @param {string} query Texto de búsqueda semántica.
+ * @returns {Promise<ImageResult[]>} Lista de imágenes similares a la consulta.
+ */
 async function semanticSearch(query: string) {
     try {
         const pc = getPinecone()
@@ -77,6 +185,13 @@ async function semanticSearch(query: string) {
             vector = emb.data[0].embedding as any
         } catch {
             // Fallback determinista si no hay OpenAI
+            /**
+             * Genera un vector numérico pseudoaleatorio a partir de un texto.
+             *
+             * @param {string} text Texto de entrada.
+             * @param {number} [dim=1536] Dimensión del embedding simulado.
+             * @returns {number[]} Vector de números en [0, 1).
+             */
             function pseudoEmbedding(text: string, dim = 1536) {
                 let h = 2166136261
                 for (let i = 0; i < text.length; i++) h = (h ^ text.charCodeAt(i)) * 16777619
@@ -106,8 +221,26 @@ async function semanticSearch(query: string) {
 }
 
 /**
- * 🔹 Esta función se importa desde api/mcp.ts
- *    y crea un McpServer nuevo con todas las tools registradas.
+ * Crea y configura una instancia de `McpServer` con todas las tools
+ * disponibles para PromptContent.
+ *
+ * Tools registradas:
+ *
+ * 1. **getContent**
+ *    - Busca imágenes relacionadas con una descripción textual.
+ *    - Usa MongoDB (búsqueda full-text / regex) y, si es necesario, `semanticSearch`.
+ *    - Retorna imágenes + hashtags sugeridos.
+ *
+ * 2. **searchMusic**
+ *    - Busca pistas en Spotify según un `query`.
+ *    - Usa la función `searchTrack` importada.
+ *
+ * 3. **createCampaign**
+ *    - Genera una campaña de marketing a partir de una descripción detallada.
+ *    - Construye bitácora, segmentos, calendario, métricas y recomendaciones.
+ *    - Intenta persistir logs en MongoDB (`CampaignLogs` y `AIRequests`).
+ *
+ * @returns {McpServer} Servidor MCP listo para conectarse a un transporte.
  */
 export function createPromptContentServer() {
     const server = new McpServer({
@@ -137,6 +270,22 @@ export function createPromptContentServer() {
                 hashtags: z.array(z.string())
             }
         },
+        /**
+         * Handler de la tool `getContent`.
+         *
+         * Flujo:
+         * 1. Intenta buscar en MongoDB usando índice de texto.
+         * 2. Si falla, hace fallback a búsqueda por regex.
+         * 3. Si no hay resultados, usa `semanticSearch`.
+         * 4. Si aún hay pocos resultados, completa con `mockImages`.
+         * 5. Sanea URLs y construye hashtags a partir de descripción e imágenes.
+         *
+         * @async
+         * @param {{ descripcion: string }} params Objeto de parámetros de entrada.
+         * @param {string} params.descripcion Descripción textual para buscar imágenes.
+         * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: { images: ImageResult[]; hashtags: string[] } }>}
+         *          Respuesta MCP con contenido serializado y estructurado.
+         */
         async ({ descripcion }) => {
             let images: { url: string; alt?: string; score?: number; tags?: string[] }[] = []
 
@@ -226,6 +375,19 @@ export function createPromptContentServer() {
                 )
             }
         },
+        /**
+         * Handler de la tool `searchMusic`.
+         *
+         * Llama a `searchTrack` para obtener pistas desde Spotify
+         * y retorna la lista formateada para MCP.
+         *
+         * @async
+         * @param {{ query: string; limit?: number }} params Parámetros de entrada.
+         * @param {string} params.query Palabras clave para la búsqueda.
+         * @param {number} [params.limit=5] Máximo de pistas a retornar (1–10).
+         * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: { tracks: any[] } }>}
+         *          Respuesta MCP con pistas encontradas.
+         */
         async ({ query, limit = 5 }) => {
             const tracks = await searchTrack(query, limit)
             const output = { tracks }
@@ -301,6 +463,33 @@ export function createPromptContentServer() {
                 recomendaciones: z.array(z.string())
             }
         },
+        /**
+         * Handler de la tool `createCampaign`.
+         *
+         * A partir de la descripción de la campaña y los datos de público:
+         * - Genera un ID de campaña.
+         * - Construye una bitácora con resumen, objetivos y estrategia.
+         * - Define segmentos con mensajes personalizados (awareness / consideration / conversion).
+         * - Crea un calendario semanal de publicaciones por plataforma y objetivo.
+         * - Estima métricas de alcance, engagement, conversión y ROI.
+         * - Intenta persistir logs en colecciones `CampaignLogs` y `AIRequests` de MongoDB (sin romper la respuesta en caso de error).
+         *
+         * @async
+         * @param {{
+         *   descripcion: string;
+         *   publico: {
+         *     edad?: { min: number; max: number };
+         *     intereses?: string[];
+         *     ubicaciones?: string[];
+         *     genero?: "masculino" | "femenino" | "mixto";
+         *     nivelSocioeconomico?: "bajo" | "medio" | "alto" | "mixto";
+         *   };
+         *   duracion?: "1 semana" | "2 semanas" | "1 mes" | "3 meses";
+         *   presupuesto?: number;
+         * }} params Parámetros de entrada para la generación de campaña.
+         * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: any }>}
+         *          Respuesta MCP con la campaña generada.
+         */
         async ({ descripcion, publico, duracion = "1 mes", presupuesto = 5000 }) => {
             const id = `campaign_${Date.now()}`
 
@@ -543,7 +732,7 @@ export function createPromptContentServer() {
     return server
 }
 
-(async () => {
+;(async () => {
     if (process.env.RUN_AS_MCP_STDIO !== "0") {
         const server = createPromptContentServer()
         const transport = new StdioServerTransport()
