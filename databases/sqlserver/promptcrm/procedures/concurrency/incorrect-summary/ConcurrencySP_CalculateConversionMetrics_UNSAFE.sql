@@ -8,6 +8,10 @@
 -- Escenario: Calculador de métricas que lee conversiones mientras otras sesiones las actualizan
 -- Tabla: LeadConversions
 -----------------------------------------------------------
+
+use PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_CalculateConversionMetrics_UNSAFE]
 	@LeadId INT,
 	@CalculationDelay INT = 2 -- Segundos para simular procesamiento

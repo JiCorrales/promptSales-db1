@@ -8,6 +8,10 @@
 -- Escenario: Calculador de métricas mejorado con lecturas consistentes
 -- Tabla: LeadConversions
 -----------------------------------------------------------
+
+use PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_CalculateConversionMetrics_SAFE]
 	@LeadId INT,
 	@CalculationDelay INT = 2 -- Segundos para simular procesamiento

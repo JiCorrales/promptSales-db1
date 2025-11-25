@@ -8,6 +8,10 @@
 -- Escenario: Dos promociones aplicando créditos simultáneamente
 -- Tabla: SubscriberWallets
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_ApplyCredit_UNSAFE]
 	@SubscriberId INT,
 	@CreditAmount DECIMAL(18,4), -- Monto de crédito a agregar

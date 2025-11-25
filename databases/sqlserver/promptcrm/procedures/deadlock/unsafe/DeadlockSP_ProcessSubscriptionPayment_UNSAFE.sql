@@ -7,6 +7,15 @@
 -- Orden de acceso: SubscriberWallets → Transactions
 -- Problema: Orden diferente a otros SPs causa deadlock
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[DeadlockSP_ProcessSubscriptionPayment_UNSAFE]
 	@SubscriberId INT,
 	@Amount DECIMAL(18,4),
@@ -22,7 +31,8 @@ BEGIN
 	DECLARE @Now DATETIME2 = GETUTCDATE()
 	DECLARE @OldCredits DECIMAL(18,4)
 	DECLARE @NewCredits DECIMAL(18,4)
-	DECLARE @TransactionCount INT
+	DECLARE @TransactionId INT
+	DECLARE @TransactionAmount DECIMAL(18,4)
 
 	SET @InicieTransaccion = 0
 	IF @@TRANCOUNT=0 BEGIN
@@ -54,14 +64,38 @@ BEGIN
 		WAITFOR DELAY @WaitTime1
 
 		-- ⚠️ PASO 2: Acceso a TRANSACTIONS (segundo recurso - CONFLICTO!)
-		PRINT '[ProcessSubscriptionPayment_UNSAFE] Step 2: Attempting to access Transactions...'
+		-- Necesitamos lockear y ACTUALIZAR una transacción específica del subscriber
+		PRINT '[ProcessSubscriptionPayment_UNSAFE] Step 2: Attempting to lock Transactions...'
 
-		SELECT @TransactionCount = COUNT(*)
-		FROM [crm].[Transactions] WITH (UPDLOCK)
+		-- Obtener la primera transacción PENDING/PROCESSING del subscriber
+		SELECT TOP 1 @TransactionId = transactionId, @TransactionAmount = amount
+		FROM [crm].[Transactions] WITH (UPDLOCK, ROWLOCK)
 		WHERE subscriberId = @SubscriberId
+		  AND transactionStatusId IN (1, 2) -- PENDING or PROCESSING
+		ORDER BY createdAt DESC
 
-		PRINT '[ProcessSubscriptionPayment_UNSAFE] Found ' + CAST(@TransactionCount AS VARCHAR(10)) +
-		      ' existing transactions'
+		IF @TransactionId IS NOT NULL
+		BEGIN
+			PRINT '[ProcessSubscriptionPayment_UNSAFE] Transaction locked - ID: ' +
+			      CAST(@TransactionId AS VARCHAR(10)) + ', Amount: $' + CAST(@TransactionAmount AS VARCHAR(20))
+
+			-- Actualizar la transacción a CAPTURED
+			UPDATE [crm].[Transactions]
+			SET transactionStatusId = 4, -- CAPTURED
+			    updatedAt = @Now,
+			    metadata = JSON_MODIFY(
+			        ISNULL(metadata, '{}'),
+			        '$.processedBy',
+			        'ProcessSubscriptionPayment_UNSAFE'
+			    )
+			WHERE transactionId = @TransactionId
+
+			PRINT '[ProcessSubscriptionPayment_UNSAFE] Transaction updated to CAPTURED'
+		END
+		ELSE
+		BEGIN
+			PRINT '[ProcessSubscriptionPayment_UNSAFE] No pending transactions found'
+		END
 
 		-- Actualizar la billetera
 		SET @NewCredits = @OldCredits + @Amount

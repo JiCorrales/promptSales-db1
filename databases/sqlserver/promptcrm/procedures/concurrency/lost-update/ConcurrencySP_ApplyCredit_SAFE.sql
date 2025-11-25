@@ -8,6 +8,10 @@
 -- Escenario: Aplicador de créditos mejorado con operaciones atómicas
 -- Tabla: SubscriberWallets
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_ApplyCredit_SAFE]
 	@SubscriberId INT,
 	@CreditAmount DECIMAL(18,4), -- Monto de crédito a agregar

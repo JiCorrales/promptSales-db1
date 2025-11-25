@@ -8,6 +8,10 @@
 -- Escenario: Reporteador de balances que lee datos no confirmados
 -- Tabla: SubscriberWallets (tabla específica para demos de concurrencia)
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_ReadWalletBalance_UNSAFE]
 	@SubscriberId INT,
 	@ReadDelay INT = 1 -- Segundos para simular procesamiento

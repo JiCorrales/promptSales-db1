@@ -7,6 +7,10 @@
 -- Solucion: READ COMMITTED solo lee datos confirmados
 -- Escenario: Reporteador de balances mejorado que espera commits
 -- Tabla: SubscriberWallets (tabla específica para demos de concurrencia)
+
+USE PromptCRM
+GO
+
 -----------------------------------------------------------
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_ReadWalletBalance_SAFE]
 	@SubscriberId INT,

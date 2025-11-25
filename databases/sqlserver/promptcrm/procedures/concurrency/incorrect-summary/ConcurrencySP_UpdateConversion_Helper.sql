@@ -7,6 +7,10 @@
 -- Propósito: Modificar datos mientras otro SP los está leyendo múltiples veces
 -- Tabla: LeadConversions
 -----------------------------------------------------------
+
+Use PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_UpdateConversion_Helper]
 	@LeadId INT,
 	@NewConversionValue DECIMAL(18,4),

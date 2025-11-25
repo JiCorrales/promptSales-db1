@@ -7,6 +7,10 @@
 -- Propósito: Crear datos "fantasma" que serán leídos por otros SPs
 -- Tabla: SubscriberWallets
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[ConcurrencySP_UpdateWalletWithRollback_Helper]
 	@SubscriberId INT,
 	@NewCredits DECIMAL(18,4),

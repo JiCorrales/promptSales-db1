@@ -7,6 +7,10 @@
 -- SOLUTION: Orden consistente = Transactions → LeadConversions
 --           Este orden DEBE ser respetado por TODOS los procedures
 -----------------------------------------------------------
+
+USE PromptCRM
+GO
+
 CREATE OR ALTER PROCEDURE [crm].[DeadlockSP_ProcessLeadConversion_SAFE]
 	@LeadId INT,
 	@SubscriberId INT,
