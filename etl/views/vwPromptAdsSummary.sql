@@ -17,7 +17,7 @@ WITH MetricsByAd AS (
 ChannelsByAd AS (
     SELECT
         ipa.AdId,
-        STRING_AGG(DISTINCT ch.name, ', ') AS Channels
+        STRING_AGG( ch.name, ', ') AS Channels
     FROM dbo.InfluencersPerAd ipa
     JOIN dbo.Influencers inf ON inf.InfluencerId = ipa.InfluencerId
     JOIN dbo.Channels ch     ON ch.ChannelId     = inf.ChannelId
@@ -27,7 +27,7 @@ ChannelsByAd AS (
 MarketsByAd AS (
     SELECT
         aa.AdId,
-        STRING_AGG(DISTINCT ta.name, ', ') AS TargetMarkets
+        STRING_AGG( ta.name, ', ') AS TargetMarkets
     FROM dbo.AdAudience aa
     JOIN dbo.TargetAudience ta ON ta.TargetAudienceId = aa.TargetAudienceId
     WHERE aa.enabled = 1
