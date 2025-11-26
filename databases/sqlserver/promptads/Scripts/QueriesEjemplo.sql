@@ -58,30 +58,42 @@ WHEN NOT MATCHED BY TARGET THEN
 
 
     -- Ver cómo LTRIM limpia espacios iniciales en el nombre de campaña
-SELECT
-    CampaignId,
-    name                  AS NombreOriginal,
-    LTRIM(name)           AS NombreSinEspaciosIniciales
-FROM dbo.Campaigns;
+SELECT TOP (10)
+    c.CampaignId,
+    c.name                         AS NombreOriginal,
+    '   ' + c.name                 AS NombreConEspaciosSimulados,
+    LTRIM('   ' + c.name)          AS NombreDespuesDeLTRIM
+FROM dbo.Campaigns AS c;
+
 
 
 
 -- Normalizar emails de usuarios (minúsculas y sin espacios a los lados)
 SELECT
     UserId,
-    email                                   AS EmailOriginal,
-    LOWER(LTRIM(RTRIM(email)))             AS EmailNormalizado
+    LastName                                   AS Apellido,
+    LOWER(LTRIM(RTRIM(lastName)))             AS ApellidoNormalizado
 FROM dbo.Users;
 
 
 -- Ejemplo de redondeo de costo en métricas de anuncios
 SELECT TOP (20)
     AdId,
-    cost,
-    FLOOR(cost)    AS CostFloor,   -- redondea hacia abajo
-    CEILING(cost)  AS CostCeiling  -- redondea hacia arriba
+    AVG(cost)      AS AvgCost,
+    FLOOR(AVG(cost))   AS CostFloor,
+    CEILING(AVG(cost)) AS CostCeiling
 FROM dbo.AdMetricsDaily
+GROUP BY AdId
 ORDER BY AdId;
+
+SELECT TOP (20)
+    AdId,
+    COUNT(*) AS NumMedias
+FROM dbo.AdMedias
+GROUP BY AdId
+ORDER BY NumMedias DESC;
+
+
 
 
 -- Bucket de impresiones en miles

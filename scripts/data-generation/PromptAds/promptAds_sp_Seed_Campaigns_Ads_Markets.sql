@@ -57,10 +57,8 @@ BEGIN
         END
 
         /*-----------------------------
-          Campaigns (nueva lógica)
-          - 30% Activa, 70% Finalizada/Cancelada
-          - Fechas entre 2024-07-01 y 2026-01-31
-          - Picos en diciembre, enero y agosto
+          Campaigns (30% activas, 70% culminadas,
+          ventana 2024-07-01 a 2026-01-31 con picos)
         -----------------------------*/
         DECLARE @MinStartDate   date = '2024-07-01';
         DECLARE @MaxEndDate     date = '2026-01-31';
@@ -72,7 +70,6 @@ BEGIN
         SELECT @startCampId = ISNULL(MAX(CampaignId),0)
         FROM dbo.Campaigns;
 
-        -- IDs de status por nombre (no quemamos números)
         SELECT @StatusActiva     = CampaignStatusId FROM dbo.CampaignStatus WHERE name = 'Activa';
         SELECT @StatusFinalizada = CampaignStatusId FROM dbo.CampaignStatus WHERE name = 'Finalizada';
         SELECT @StatusCancelada  = CampaignStatusId FROM dbo.CampaignStatus WHERE name = 'Cancelada';
@@ -84,7 +81,6 @@ BEGIN
             RETURN;
         END
 
-        -- Tabla de meses con pesos (100 filas, patrón que se repite)
         DECLARE @Months TABLE(
             MonthKey int IDENTITY(1,1) PRIMARY KEY,
             [Year]   int NOT NULL,
@@ -109,7 +105,7 @@ BEGIN
         UNION ALL
         SELECT TOP (10) 2025, 8  FROM dbo.Numbers;
 
-        -- 25% otros meses dentro de la ventana: Jul, Sep, Oct 2024; Feb, Mar 2025
+        -- 25% otros meses dentro de la ventana
         INSERT INTO @Months([Year], [Month])
         SELECT TOP (5) 2024, 7 FROM dbo.Numbers
         UNION ALL
@@ -124,7 +120,6 @@ BEGIN
         DECLARE @MonthsCount int;
         SELECT @MonthsCount = COUNT(*) FROM @Months;
 
-        -- Semillas de campañas: RowNum, StartDate, EndDate, Status
         IF OBJECT_ID('tempdb..#CampaignSeeds') IS NOT NULL
             DROP TABLE #CampaignSeeds;
 
@@ -174,12 +169,10 @@ BEGIN
             SELECT dbo.fn_RandBetween(c.Seed, 7, 90) AS offDays
         ) o;
 
-        -- Aseguramos no caer antes de 2024-07-01
         UPDATE #CampaignSeeds
         SET StartDate = CASE WHEN StartDate < @MinStartDate THEN @MinStartDate ELSE StartDate END,
             EndDate   = CASE WHEN EndDate   < @MinStartDate THEN DATEADD(DAY, 7, @MinStartDate) ELSE EndDate END;
 
-        -- Tabla auxiliar: una marca por compañía (para BrandId simple y eficiente)
         DECLARE @CompanyRange bigint,
                 @MinCompanyId bigint,
                 @MaxCompanyId bigint;
@@ -210,7 +203,6 @@ BEGIN
             ON b.CompanyId = c.CompanyId
         GROUP BY c.CompanyId;
 
-        -- Inserción final de campañas
         INSERT INTO dbo.Campaigns
             (name, description, createdAt, updatedAt,
              startDate, endDate, budget,
@@ -328,7 +320,7 @@ BEGIN
         PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' ChannelsPerAd.');
 
         /*-----------------------------
-          Media y AdMedias
+          Media
         -----------------------------*/
         INSERT INTO dbo.Media(MediaTypeId, URL)
         SELECT TOP (100000)
@@ -339,18 +331,58 @@ BEGIN
         SET @rows = @@ROWCOUNT;
         PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' Media.');
 
+        /*-----------------------------
+          AdMedias 
+        -----------------------------*/
+        DECLARE @TotalAdMedias int = 200000;
+        DECLARE @AdsCount int, @MediaCount int;
+
+        IF OBJECT_ID('tempdb..#AdsIdx') IS NOT NULL DROP TABLE #AdsIdx;
+        IF OBJECT_ID('tempdb..#MediaIdx') IS NOT NULL DROP TABLE #MediaIdx;
+
+        SELECT ROW_NUMBER() OVER (ORDER BY AdId) AS rn,
+               AdId
+        INTO #AdsIdx
+        FROM dbo.Ads
+        WHERE AdId > @startAdId;
+
+        SELECT ROW_NUMBER() OVER (ORDER BY MediaId) AS rn,
+               MediaId
+        INTO #MediaIdx
+        FROM dbo.Media;
+
+        SELECT @AdsCount   = COUNT(*) FROM #AdsIdx;
+        SELECT @MediaCount = COUNT(*) FROM #MediaIdx;
+
+        IF @AdsCount = 0 OR @MediaCount = 0
+        BEGIN
+            RAISERROR('sp_Seed_Campaigns_Ads_Markets: No hay Ads o Media para generar AdMedias.', 16, 1);
+            ROLLBACK TRAN;
+            RETURN;
+        END
+
+        ;WITH Seq AS (
+            SELECT TOP (@TotalAdMedias)
+                   ROW_NUMBER() OVER (ORDER BY n.n) AS rn
+            FROM dbo.Numbers n
+            ORDER BY n.n
+        )
         INSERT INTO dbo.AdMedias(AdId, MediaId, createdAt, deleted, enabled)
-        SELECT TOP (200000)
+        SELECT
             a.AdId,
             m.MediaId,
-            dbo.fn_RandomDateTime(m.MediaId),
+            dbo.fn_RandomDateTime(s.rn),
             0,
             1
-        FROM dbo.Ads a
-        CROSS JOIN dbo.Media m;
+        FROM Seq s
+        CROSS JOIN (SELECT @AdsCount AS AdsCount, @MediaCount AS MediaCount) c
+        JOIN #AdsIdx a
+          ON a.rn = ((s.rn - 1) % c.AdsCount) + 1
+        JOIN #MediaIdx m
+          ON m.rn = ((s.rn - 1) % c.MediaCount) + 1;
 
         SET @rows = @@ROWCOUNT;
-        PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' AdMedias.');
+        PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' AdMedias (distribuidos).');
 
         /*-----------------------------
           TargetAudience, AudienceFeatures, AudienceValues, TargetConfig, AdAudience
@@ -399,7 +431,6 @@ BEGIN
             PRINT 'sp_Seed_Campaigns_Ads_Markets: Insertados TargetConfig iniciales.';
         END
 
-        -- AdAudience (asignar 1–3 audiencias por Ad)
         INSERT INTO dbo.AdAudience(AdId, TargetAudienceId, enabled)
         SELECT a.AdId,
                ta.TargetAudienceId,
@@ -416,30 +447,67 @@ BEGIN
         PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' AdAudience.');
 
         /*-----------------------------
-          InfluencersPerAd y contactos
+          InfluencersPerAd 
         -----------------------------*/
+        DECLARE @InfluencersPerAdRows int = 200000;
+        DECLARE @InflCount int, @AdsAllCount int;
+
+        IF OBJECT_ID('tempdb..#InflIdx') IS NOT NULL DROP TABLE #InflIdx;
+        IF OBJECT_ID('tempdb..#AdsIdxAll') IS NOT NULL DROP TABLE #AdsIdxAll;
+
+        SELECT ROW_NUMBER() OVER (ORDER BY InfluencerId) AS rn,
+               InfluencerId
+        INTO #InflIdx
+        FROM dbo.Influencers;
+
+        SELECT ROW_NUMBER() OVER (ORDER BY AdId) AS rn,
+               AdId
+        INTO #AdsIdxAll
+        FROM dbo.Ads;
+
+        SELECT @InflCount  = COUNT(*) FROM #InflIdx;
+        SELECT @AdsAllCount = COUNT(*) FROM #AdsIdxAll;
+
+        IF @InflCount = 0 OR @AdsAllCount = 0
+        BEGIN
+            RAISERROR('sp_Seed_Campaigns_Ads_Markets: No hay Influencers o Ads para generar InfluencersPerAd.', 16, 1);
+            ROLLBACK TRAN;
+            RETURN;
+        END
+
+        ;WITH Seq2 AS (
+            SELECT TOP (@InfluencersPerAdRows)
+                   ROW_NUMBER() OVER (ORDER BY n.n) AS rn
+            FROM dbo.Numbers n
+            ORDER BY n.n
+        )
         INSERT INTO dbo.InfluencersPerAd(InfluencerId, AdId, enabled, fee, contractRef,
                                          posttime, updatedAt)
-        SELECT TOP (200000)
+        SELECT
             i.InfluencerId,
             a.AdId,
             1,
-            CAST(dbo.fn_RandBetween(a.AdId, 100, 3000) AS decimal(18,2)),
+            CAST(dbo.fn_RandBetween(s.rn, 100, 3000) AS decimal(18,2)),
             CONCAT('CTR-', i.InfluencerId, '-', a.AdId),
             dbo.fn_RandomDateTime(a.AdId + i.InfluencerId),
             dbo.fn_RandomDateTime(a.AdId + i.InfluencerId + 500000)
-        FROM dbo.Influencers i
-        CROSS JOIN dbo.Ads a;
+        FROM Seq2 s
+        CROSS JOIN (SELECT @InflCount AS InflCount, @AdsAllCount AS AdsCount) c
+        JOIN #InflIdx   i ON i.rn = ((s.rn - 1) % c.InflCount) + 1
+        JOIN #AdsIdxAll a ON a.rn = ((s.rn - 1) % c.AdsCount) + 1;
 
         SET @rows = @@ROWCOUNT;
-        PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' InfluencersPerAd.');
+        PRINT CONCAT('sp_Seed_Campaigns_Ads_Markets: Insertados ', @rows, ' InfluencersPerAd (distribuidos).');
 
+        /*-----------------------------
+          InfluencerContacts
+        -----------------------------*/
         INSERT INTO dbo.InfluencerContacts(InfluencerId, ContactTypeId, value, number, createdAt, enabled, deleted)
         SELECT TOP (100000)
             i.InfluencerId,
             ct.ContactTypeId,
             CASE ct.name
-                WHEN 'Email' THEN CONCAT(i.username, '@influencers.test')
+                WHEN 'Email'   THEN CONCAT(i.username, '@influencers.test')
                 WHEN 'Teléfono' THEN CONCAT('+506', RIGHT('8'+CAST(i.InfluencerId AS varchar(10)),8))
                 ELSE CONCAT(ct.name, ':', i.username)
             END,
@@ -470,3 +538,4 @@ END;
 GO
 
 EXEC sp_Seed_Campaigns_Ads_Markets;
+
