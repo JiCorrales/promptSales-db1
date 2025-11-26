@@ -1,7 +1,5 @@
 use PromptAds;
 
-
-
 -- Companies que nunca han tenido campañas
 SELECT c.CompanyId, c.name
 FROM dbo.Companies c
@@ -13,22 +11,35 @@ FROM dbo.Campaigns ca
 JOIN dbo.Companies c2 ON c2.CompanyId = ca.CompanyId;
 
 
--- BrandId que aparecen tanto en campañas activas como en pausadas
-SELECT DISTINCT cActive.BrandId
-FROM dbo.Campaigns cActive
-JOIN dbo.CampaignStatus csA ON csA.CampaignStatusId = cActive.CampaignStatusId
-WHERE csA.name = 'Activa'
+-- Marcas con campañas activas
+SELECT DISTINCT c.BrandId
+FROM dbo.Campaigns c
+JOIN dbo.CampaignStatus cs ON cs.CampaignStatusId = c.CampaignStatusId
+WHERE cs.name = 'Activa'
 
 INTERSECT
 
-SELECT DISTINCT cPaused.BrandId
-FROM dbo.Campaigns cPaused
-JOIN dbo.CampaignStatus csP ON csP.CampaignStatusId = cPaused.CampaignStatusId
-WHERE csP.name = 'Pausada';
+-- Marcas con campañas de alto presupuesto (cualquier estado)
+SELECT DISTINCT c2.BrandId
+FROM dbo.Campaigns c2
+WHERE c2.budget > 20000;
 
 
 
 -- Actualizar / insertar watermark de un proceso ETL
+
+SELECT 
+    processName,
+    LastSuccessAt,
+    Notes
+FROM dbo.ETLWatermark
+WHERE processName = 'PromptAds_To_PromptSales_Summary';
+
+USE PromptAds;
+GO
+
+
+
 MERGE dbo.ETLWatermark AS target
 USING (
     SELECT
