@@ -179,3 +179,8 @@ BEGIN
     ) u;
 END;
 GO
+
+
+select * from Logs;
+
+EXEC dbo.sp_Seed_Metrics_Social_Logs;

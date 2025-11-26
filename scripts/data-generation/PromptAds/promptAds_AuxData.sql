@@ -1,9 +1,15 @@
 USE PromptAds;
 GO
 
-/*---------------------------------------------------------
-  Tabla de números (soporte para generar grandes volúmenes)
----------------------------------------------------------*/
+/*========================================================
+  SCRIPT: Datos Auxiliares 
+  PRE-REQUISITOS:
+    1) Base de datos PromptAds ya creada.
+    2) Tablas del esquema principal ya creadas (script DDL).
+  ESTE SCRIPT DEBE EJECUTARSE:
+    - Antes de los stored procedures de seeding de datos.
+========================================================*/
+
 IF OBJECT_ID('dbo.Numbers', 'U') IS NOT NULL
     DROP TABLE dbo.Numbers;
 GO
@@ -13,24 +19,21 @@ CREATE TABLE dbo.Numbers (
 );
 GO
 
-;WITH N1 AS (
+;WITH NumbersCTE AS (
     SELECT 1 AS n
-    UNION ALL SELECT 1
-), N2 AS (
-    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
-    FROM N1 a CROSS JOIN N1 b CROSS JOIN N1 c CROSS JOIN N1 d
-), N3 AS (
-    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
-    FROM N2 a CROSS JOIN N2 b
+    UNION ALL
+    SELECT n + 1
+    FROM NumbersCTE
+    WHERE n < 1000000
 )
 INSERT INTO dbo.Numbers(n)
-SELECT TOP (1000000) n
-FROM N3
-ORDER BY n;
+SELECT n
+FROM NumbersCTE
+OPTION (MAXRECURSION 0);
 GO
 
 /*---------------------------------------------------------
-  Tablas de nombres y apellidos (mínimo 50 cada una)
+   Tablas de nombres y apellidos
 ---------------------------------------------------------*/
 IF OBJECT_ID('dbo.FirstNames', 'U') IS NOT NULL DROP TABLE dbo.FirstNames;
 IF OBJECT_ID('dbo.LastNames', 'U')  IS NOT NULL DROP TABLE dbo.LastNames;
@@ -76,7 +79,7 @@ VALUES
 GO
 
 /*---------------------------------------------------------
-  Función para fecha aleatoria entre 2024-01-01 y 2025-12-31
+   Función para fecha aleatoria entre 2024-01-01 y 2025-12-31
 ---------------------------------------------------------*/
 IF OBJECT_ID('dbo.fn_RandomDateTime', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_RandomDateTime;
@@ -95,7 +98,7 @@ END;
 GO
 
 /*---------------------------------------------------------
-  Función RandBetween para números
+   Función RandBetween para números
 ---------------------------------------------------------*/
 IF OBJECT_ID('dbo.fn_RandBetween', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_RandBetween;
@@ -109,5 +112,3 @@ BEGIN
     RETURN @Min + (ABS(CHECKSUM(@Seed)) % @Diff);
 END;
 GO
-
-
