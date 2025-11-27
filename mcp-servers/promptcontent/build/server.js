@@ -19,6 +19,7 @@ const mongodb_1 = require("mongodb");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const pinecone_1 = require("@pinecone-database/pinecone");
 const spotify_1 = require("./spotify");
+const openai_1 = __importDefault(require("openai"));
 /**
  * Cliente global de MongoDB reutilizable.
  * @type {MongoClient | null}
@@ -216,13 +217,9 @@ function sanitizeUrl(u) {
 function themedImageUrl(tokens, i) {
     const toks = tokens.filter(Boolean).map(t => toEnglishToken(toTagToken(t)));
     const pool = Array.from(new Set(toks));
-    const pick = [];
-    while (pick.length < Math.min(3, pool.length)) {
-        const j = Math.floor(Math.random() * pool.length);
-        const val = pool[j];
-        if (!pick.includes(val))
-            pick.push(val);
-    }
+    const priority = new Set(["sunrise", "sunset", "sun"]);
+    const sorted = [...pool].sort((a, b) => (priority.has(b) ? 1 : 0) - (priority.has(a) ? 1 : 0));
+    const pick = sorted.slice(0, Math.min(3, sorted.length));
     const q = pick.map(t => encodeURIComponent(t)).join(",");
     return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : "";
 }
@@ -246,47 +243,107 @@ function extractHashtags(text) {
     const unique = Array.from(new Set(words));
     return unique.slice(0, 15).map(w => normalizeHashtag(w));
 }
-function mockImagesFromTokens(tokens, count = 5) {
-    const out = [];
-    for (let i = 0; i < count; i++) {
-        const url = themedImageUrl(tokens, i);
-        const alt = `${toEnglishToken(tokens[0] || "image")} image with authentic colors`;
-        const tags = Array.from(new Set(tokens.map(toEnglishToken))).slice(0, 5);
-        const score = 2 + Math.random() * 0.5;
-        out.push({ url, alt, tags, score });
-    }
-    return out;
-}
 async function translateToEnglish(text) {
-    try {
-        const { OpenAI } = await import("openai");
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const resp = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "Translate input to English. Return only the translation." },
-                { role: "user", content: text }
-            ]
-        });
-        const out = resp.choices?.[0]?.message?.content || "";
-        return out.trim();
-    }
-    catch {
-        return stripAccents(text);
-    }
+    // Sin OpenAI: devolvemos texto normalizado sin acentos
+    return stripAccents(text);
 }
 function isSpanish(text) {
     const accents = /[áéíóúñ]/i.test(text);
     const sw = /(\bde\b|\bla\b|\bel\b|\ben\b|\by\b|\bpara\b|\bpor\b|\bcon\b|\bdel\b|\blas\b|\blos\b|\bun\b|\buna\b|\bal\b|\bque\b|\bse\b)/i.test(text);
     return accents || sw;
 }
-/**
- * @typedef {Object} ImageResult
- * @property {string} url URL de la imagen.
- * @property {string} [alt] Texto alternativo de la imagen.
- * @property {number} [score] Puntaje de relevancia (si aplica).
- * @property {string[]} [tags] Etiquetas asociadas a la imagen.
- */
+function parseSegmentsPayload(raw) {
+    const fenced = (raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    const start = fenced.indexOf("{");
+    const end = fenced.lastIndexOf("}");
+    const candidates = [fenced];
+    if (start !== -1 && end !== -1 && end > start) {
+        candidates.push(fenced.slice(start, end + 1));
+    }
+    for (const c of candidates) {
+        try {
+            return JSON.parse(c);
+        }
+        catch {
+            continue;
+        }
+    }
+    return null;
+}
+function fallbackSegments(descripcion, auds) {
+    const base = (descripcion || "").trim().slice(0, 140);
+    const mk = (t) => ({ tipo: t, texto: `${base}` });
+    return [
+        {
+            nombre: "Awareness",
+            mensajes: [mk("awareness"), mk("consideration"), mk("conversion")]
+        }
+    ];
+}
+async function generateMessagesWithAI(descripcion, auds) {
+    const key = process.env.OPENAI_API_KEY;
+    if (!key)
+        return fallbackSegments(descripcion, auds);
+    const client = new openai_1.default({ apiKey: key });
+    const system = `
+Eres un generador de campañas de marketing.
+Devuelve SOLO un JSON válido, con esta forma exacta:
+
+{
+  "segmentos": [
+    {
+      "nombre": "Awareness",
+      "mensajes": [
+        { "tipo": "awareness", "texto": "…"},
+        { "tipo": "consideration", "texto": "…"},
+        { "tipo": "conversion", "texto": "…"}
+      ]
+    }
+  ]
+}
+
+NO escribas nada fuera del JSON.
+NO incluyas explicaciones.
+DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
+`;
+    const user = {
+        descripcion,
+        audiencia: auds
+    };
+    const tries = [1, 2, 3];
+    for (const attempt of tries) {
+        try {
+            const completion = await client.responses.create({
+                model: "o4-mini",
+                reasoning: { effort: "low" },
+                input: [
+                    { role: "system", content: system },
+                    { role: "user", content: JSON.stringify(user) }
+                ],
+                max_output_tokens: 500
+            });
+            const raw = completion.output_text;
+            const parsed = parseSegmentsPayload(raw);
+            if (!parsed)
+                continue;
+            if (!parsed.segmentos)
+                continue;
+            if (!Array.isArray(parsed.segmentos))
+                continue;
+            const allGood = parsed.segmentos.every((seg) => Array.isArray(seg.mensajes) &&
+                seg.mensajes.length === 3 &&
+                seg.mensajes.every((m) => typeof m.texto === "string" && typeof m.tipo === "string"));
+            if (allGood)
+                return parsed.segmentos;
+        }
+        catch (e) {
+            if (e?.status === 429 || e?.code === "insufficient_quota") {
+                return [];
+            }
+        }
+    }
+    return fallbackSegments(descripcion, auds);
+}
 /**
  * Realiza una búsqueda semántica de imágenes usando Pinecone.
  *
@@ -301,14 +358,23 @@ function isSpanish(text) {
  * @param {string} query Texto de búsqueda semántica.
  * @returns {Promise<ImageResult[]>} Lista de imágenes similares a la consulta.
  */
+function pseudoEmbedding(query, dim = 1536) {
+    // Genera un embedding determinista sin OpenAI
+    const v = new Float32Array(dim);
+    const seed = query || "empty";
+    for (let i = 0; i < seed.length; i++) {
+        const code = seed.charCodeAt(i);
+        const idx = i % dim;
+        v[idx] = (v[idx] + (code % 31)) % 1;
+    }
+    return Array.from(v);
+}
 async function semanticSearch(query, tagsFilter) {
     try {
         const pc = getPinecone();
         const index = pc.index(process.env.PINECONE_INDEX || "promptcontent");
-        const { OpenAI } = await import("openai");
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
-        const vector = emb.data[0].embedding;
+        const dim = Number(process.env.EMBED_DIM || 1536);
+        const vector = pseudoEmbedding(query, dim);
         const q = { vector, topK: 5, includeMetadata: true };
         if (tagsFilter && tagsFilter.length > 0) {
             q.filter = { tags: { $in: tagsFilter } };
@@ -376,7 +442,7 @@ function createPromptContentServer() {
      * Flujo:
      * 1. Intenta buscar en MongoDB usando índice de texto.
      * 2. Si falla, hace fallback a búsqueda por regex.
-     * 3. Si no hay resultados, usa `semanticSearch`.
+     * 3. Si no hay resultados, usa `semanticSearch` con embedding determinista (sin OpenAI).
      * 4. Si aún hay pocos resultados, completa con `mockImages`.
      * 5. Sanea URLs y construye hashtags a partir de descripción e imágenes.
      *
@@ -430,10 +496,7 @@ function createPromptContentServer() {
                 const enhancedQuery = searchText + (explicitTokensEn.length > 0 ? " hashtags: " + explicitTokensEn.join(", ") : "");
                 images = await semanticSearch(enhancedQuery, explicitTokensEn);
             }
-            if (images.length === 0) {
-                const baseTokens = explicitTokensEn.length > 0 ? explicitTokensEn : extractHashtags(searchText).map(toTagToken).map(toEnglishToken);
-                images = mockImagesFromTokens(baseTokens);
-            }
+            // No mock fallback: keep empty if semantic search returns none
             // Filtro post-búsqueda para priorizar coincidencias con hashtags
             images = images.filter(img => {
                 if (explicitTokensEn.length === 0)
@@ -443,8 +506,7 @@ function createPromptContentServer() {
             });
         }
         catch {
-            const baseTokens = explicitTokensEn.length > 0 ? explicitTokensEn : extractHashtags(searchText).map(toTagToken).map(toEnglishToken);
-            images = mockImagesFromTokens(baseTokens);
+            images = [];
         }
         // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
         if (explicitTokensEn.length > 0) {
@@ -507,63 +569,45 @@ function createPromptContentServer() {
         return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
     });
     // TOOL 3: createCampaign
-    server.registerTool("createCampaign", {
+    server.registerTool("createMarketingCampaign", {
         title: "Crear campaña de marketing",
-        description: "genera una bitácora completa con mensajes personalizados, segmentos demográficos, distribución temporal y métricas estimadas",
+        description: "Crea una nueva campaña de mercadeo a partir de una descripción textual y un perfil de público meta. El tool debe almacenar la solicitud y generar una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información proporcionada sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado debe incluir: ID de la campaña creada, la solicitud original, el público objetivo, los tres mensajes generados, la bitácora que describe el razonamiento, ajustes y consideraciones creativas.",
         inputSchema: {
             descripcion: zod_1.z
                 .string()
                 .min(200)
-                .describe("Descripción detallada de la campaña (mínimo 200 caracteres)"),
-            publico: zod_1.z
-                .object({
+                .describe("Descripción detallada de la campaña de mercadeo (mínimo 200 caracteres)"),
+            publico: zod_1.z.array(zod_1.z.object({
                 edad: zod_1.z
                     .object({ min: zod_1.z.number().int().min(13), max: zod_1.z.number().int().max(100) })
                     .optional(),
                 intereses: zod_1.z.array(zod_1.z.string()).optional(),
                 ubicaciones: zod_1.z.array(zod_1.z.string()).optional(),
-                genero: zod_1.z.enum(["masculino", "femenino", "mixto"]).optional(),
-                nivelSocioeconomico: zod_1.z.enum(["bajo", "medio", "alto", "mixto"]).optional()
+                genero: zod_1.z.enum(["masculino", "femenino", "mixto"]).optional()
             })
-                .describe("Definición del público objetivo"),
+                .describe("Definición del público objetivo")),
             duracion: zod_1.z.enum(["1 semana", "2 semanas", "1 mes", "3 meses"]).optional(),
             presupuesto: zod_1.z.number().int().min(100).optional()
         },
         outputSchema: {
-            id: zod_1.z.string(),
-            bitacora: zod_1.z.object({
-                resumen: zod_1.z.string(),
-                objetivos: zod_1.z.array(zod_1.z.string()),
-                estrategia: zod_1.z.string()
-            }),
-            segmentos: zod_1.z.array(zod_1.z.object({
-                nombre: zod_1.z.string(),
-                descripcion: zod_1.z.string(),
-                tamañoEstimado: zod_1.z.number(),
-                mensajes: zod_1.z.array(zod_1.z.object({
-                    tipo: zod_1.z.string(),
-                    texto: zod_1.z.string(),
-                    tono: zod_1.z.string(),
-                    llamadaAccion: zod_1.z.string(),
-                    duracion: zod_1.z.string()
-                }))
+            _id: zod_1.z.string().optional(),
+            logId: zod_1.z.string(),
+            campaignRef: zod_1.z.string(),
+            audience: zod_1.z.array(zod_1.z.object({
+                edad: zod_1.z.object({ min: zod_1.z.number().int().min(13), max: zod_1.z.number().int().max(100) }).nullable().optional(),
+                intereses: zod_1.z.array(zod_1.z.string()),
+                ubicaciones: zod_1.z.array(zod_1.z.string()),
+                genero: zod_1.z.enum(["masculino", "femenino", "mixto"]).nullable().optional(),
+                nivelSocioeconomico: zod_1.z.enum(["bajo", "medio", "alto", "mixto"]).nullable().optional()
             })),
-            calendario: zod_1.z.array(zod_1.z.object({
-                semana: zod_1.z.number(),
-                dia: zod_1.z.string(),
-                hora: zod_1.z.string(),
-                plataforma: zod_1.z.string(),
-                tipoContenido: zod_1.z.string(),
-                objetivo: zod_1.z.string()
+            messages: zod_1.z.array(zod_1.z.object({
+                role: zod_1.z.string(),
+                text: zod_1.z.string(),
+                ts: zod_1.z.string()
             })),
-            metricas: zod_1.z.object({
-                alcanceEstimado: zod_1.z.number(),
-                engagementEstimado: zod_1.z.number(),
-                conversionEstimada: zod_1.z.number(),
-                inversionRecomendada: zod_1.z.number(),
-                retornoInversionEstimado: zod_1.z.number()
-            }),
-            recomendaciones: zod_1.z.array(zod_1.z.string())
+            messageCount: zod_1.z.number().int(),
+            lastMessageTs: zod_1.z.string(),
+            createdAt: zod_1.z.string()
         }
     }, 
     /**
@@ -580,203 +624,106 @@ function createPromptContentServer() {
      * @async
      * @param {{
      *   descripcion: string;
-     *   publico: {
-     *     edad?: { min: number; max: number };
-     *     intereses?: string[];
-     *     ubicaciones?: string[];
-     *     genero?: "masculino" | "femenino" | "mixto";
-     *     nivelSocioeconomico?: "bajo" | "medio" | "alto" | "mixto";
-     *   };
+     *   publico: z.array(
+     *     z.object({
+     *       edad: z
+     *         .object({ min: z.number().int().min(13), max: z.number().int().max(100) })
+     *         .optional(),
+     *       intereses: z.array(z.string()).optional(),
+     *       ubicaciones: z.array(z.string()).optional(),
+     *       genero: z.enum(["masculino", "femenino", "mixto"]).optional()
+     *     })
+     *   );
      *   duracion?: "1 semana" | "2 semanas" | "1 mes" | "3 meses";
      *   presupuesto?: number;
      * }} params Parámetros de entrada para la generación de campaña.
      * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: any }>}
      *          Respuesta MCP con la campaña generada.
      */
-    async ({ descripcion, publico, duracion = "1 mes", presupuesto = 5000 }) => {
+    async ({ descripcion, publico, duracion, presupuesto }) => {
         const id = `campaign_${Date.now()}`;
-        const edadMin = publico.edad?.min || 18;
-        const edadMax = publico.edad?.max || 65;
-        const intereses = publico.intereses || ["tecnología", "moda", "viajes", "estilo de vida"];
-        const ubicaciones = publico.ubicaciones || ["México", "Colombia", "Argentina", "España"];
-        const bitacora = {
-            resumen: `Campaña dirigida a público ${edadMin}-${edadMax} años con intereses en ${intereses.join(", ")}. Objetivo: ${descripcion.slice(0, 150)}...`,
-            objetivos: [
-                "Incrementar el reconocimiento de marca en un 25%",
-                "Generar engagement significativo con el público objetivo",
-                "Convertir al menos el 3% de la audiencia en clientes potenciales",
-                "Establecer presencia en mercados clave de Latinoamérica y España"
-            ],
-            estrategia: "Utilizar una combinación de contenido visual atractivo, mensajes personalizados por segmento y distribución estratégica en plataformas digitales para maximizar el impacto y alcance de la campaña."
-        };
-        const segmentos = [
-            {
-                nombre: "Jóvenes Profesionales",
-                descripcion: `Adultos jóvenes de ${edadMin}-30 años, profesionales activos con poder adquisitivo medio-alto`,
-                tamañoEstimado: Math.floor(presupuesto * 0.35),
-                mensajes: [
-                    {
-                        tipo: "awareness",
-                        texto: `¿Buscas ${descripcion.slice(0, 60)}...? Descubre cómo puede transformar tu día a día como joven profesional.`,
-                        tono: "moderno y aspiracional",
-                        llamadaAccion: "Descubre más",
-                        duracion: "7 días"
-                    },
-                    {
-                        tipo: "consideration",
-                        texto: `Miles de jóvenes profesionales ya están beneficiándose de ${descripcion.slice(0, 50)}... Únete a la comunidad.`,
-                        tono: "social proof",
-                        llamadaAccion: "Únete ahora",
-                        duracion: "14 días"
-                    },
-                    {
-                        tipo: "conversion",
-                        texto: `Aprovecha beneficios exclusivos de ${descripcion.slice(0, 45)}... durante esta semana.`,
-                        tono: "urgente",
-                        llamadaAccion: "Activa tu beneficio",
-                        duracion: "7 días"
-                    }
-                ]
-            },
-            {
-                nombre: "Familias Activas",
-                descripcion: "Adultos de 30-45 años con familias, interesados en productos que mejoren su calidad de vida",
-                tamañoEstimado: Math.floor(presupuesto * 0.4),
-                mensajes: [
-                    {
-                        tipo: "awareness",
-                        texto: `Para ti que valoras tu tiempo con familia: ${descripcion.slice(0, 70)}... diseñado para hacer tu vida más fácil.`,
-                        tono: "cálido y confiable",
-                        llamadaAccion: "Conoce los beneficios",
-                        duracion: "10 días"
-                    },
-                    {
-                        tipo: "consideration",
-                        texto: `Historias reales muestran cómo ${descripcion.slice(0, 55)}... mejora la rutina familiar.`,
-                        tono: "emocional",
-                        llamadaAccion: "Lee testimonios",
-                        duracion: "10 días"
-                    },
-                    {
-                        tipo: "conversion",
-                        texto: `Mejora la calidad de vida de tu familia. ${descripcion.slice(0, 40)}... está aquí para ti.`,
-                        tono: "urgencia positiva",
-                        llamadaAccion: "Compra ahora",
-                        duracion: "5 días"
-                    }
-                ]
-            },
-            {
-                nombre: "Adultos Maduros",
-                descripcion: `Adultos de 45-${edadMax} años con experiencia, buscando productos de calidad y confianza`,
-                tamañoEstimado: Math.floor(presupuesto * 0.25),
-                mensajes: [
-                    {
-                        tipo: "awareness",
-                        texto: `La experiencia nos enseña que la calidad importa. ${descripcion.slice(0, 60)}... respaldado por años de excelencia.`,
-                        tono: "respetuoso y profesional",
-                        llamadaAccion: "Solicita información",
-                        duracion: "14 días"
-                    },
-                    {
-                        tipo: "consideration",
-                        texto: `Comparativas muestran la superioridad de ${descripcion.slice(0, 50)}... frente a alternativas.`,
-                        tono: "informativo",
-                        llamadaAccion: "Ver comparativa",
-                        duracion: "10 días"
-                    },
-                    {
-                        tipo: "conversion",
-                        texto: `Accede a condiciones preferenciales en ${descripcion.slice(0, 45)}... por tiempo limitado.`,
-                        tono: "premium",
-                        llamadaAccion: "Solicita oferta",
-                        duracion: "6 días"
-                    }
-                ]
-            }
-        ];
-        const semanas = duracion === "1 semana" ? 1 : duracion === "2 semanas" ? 2 : duracion === "1 mes" ? 4 : 12;
-        const calendario = [];
-        const plataformas = ["Instagram", "Facebook", "TikTok", "LinkedIn", "Twitter"];
-        const horarios = ["09:00", "12:00", "15:00", "18:00", "21:00"];
-        const tiposContenido = ["imagen", "video", "carrusel", "historia", "reel"];
-        for (let semana = 1; semana <= semanas; semana++) {
-            const dias = ["Lunes", "Miércoles", "Viernes"];
-            dias.forEach((dia, idx) => {
-                calendario.push({
-                    semana,
-                    dia,
-                    hora: horarios[idx + 1] || "15:00",
-                    plataforma: plataformas[idx] || "Instagram",
-                    tipoContenido: tiposContenido[idx] || "imagen",
-                    objetivo: semana <= 2 ? "conciencia" : semana <= 3 ? "consideración" : "conversión"
-                });
+        const auds = Array.isArray(publico) ? publico : [publico];
+        const segmentsAll = [];
+        for (const [idx, aud] of auds.entries()) {
+            const segs = await generateMessagesWithAI(descripcion, [aud]);
+            if (!Array.isArray(segs) || segs.length === 0)
+                throw new Error("ai_failed");
+            const chosen = segs[0];
+            const msgs = Array.isArray(chosen.mensajes) ? chosen.mensajes.slice(0, 3) : [];
+            if (msgs.length !== 3)
+                throw new Error("ai_failed_incomplete_messages");
+            segmentsAll.push({
+                ...chosen,
+                nombre: chosen.nombre || `Audiencia ${idx + 1}`,
+                mensajes: msgs,
+                audienceIndex: idx
             });
         }
-        const baseAlcance = presupuesto * 2.5;
-        const engagementRate = 0.03 + intereses.length * 0.005;
-        const conversionRate = 0.01 + ubicaciones.length * 0.002;
-        const metricas = {
-            alcanceEstimado: Math.floor(baseAlcance),
-            engagementEstimado: Math.floor(baseAlcance * engagementRate),
-            conversionEstimada: Math.floor(baseAlcance * engagementRate * conversionRate),
-            inversionRecomendada: presupuesto,
-            retornoInversionEstimado: Math.floor(presupuesto * 2.2)
-        };
-        const recomendaciones = [
-            "Ajusta el presupuesto semanalmente según el rendimiento de cada segmento",
-            "Monitorea los días y horarios con mayor engagement para optimizar la distribución",
-            "Crea variaciones de los mensajes para evitar el cansancio del público",
-            "Utiliza parámetros UTM para rastrear conversiones por plataforma",
-            "Implementa remarketing para usuarios que interactuaron pero no convirtieron",
-            "Realiza A/B testing con diferentes creatividades y copys",
-            "Mantén consistencia visual entre plataformas para reconocimiento de marca"
-        ];
-        // Persistencia en Mongo (CampaignLogs + AIRequests) sin romper la respuesta si falla
+        const segmentos = segmentsAll;
+        const createdAt = new Date();
+        const messages = segmentos.flatMap((seg) => (seg.mensajes).map((m) => ({
+            ts: new Date(),
+            text: `[Audiencia ${seg.audienceIndex + 1} - ${seg.nombre}] ${m.tipo}: ${m.texto}`,
+            role: "assistant"
+        })));
+        const messageCountNum = messages.length;
+        const messageCount = new mongodb_1.Int32(messageCountNum);
+        const lastMessageTs = messageCountNum ? messages[messageCountNum - 1].ts : createdAt;
+        let insertedIdStr;
+        const audienceStr = auds.map((a, i) => {
+            const age = a.edad ? `${a.edad.min ?? ""}-${a.edad.max ?? ""}` : "";
+            const ints = Array.isArray(a.intereses) ? a.intereses.join(",") : "";
+            const locs = Array.isArray(a.ubicaciones) ? a.ubicaciones.join(",") : "";
+            return `#${i + 1}:${age}|${ints}|${locs}|${a.genero || ""}`.trim();
+        }).join(" || ");
         try {
             const db = await getDb();
-            const messages = segmentos.flatMap(seg => seg.mensajes.map(m => ({
-                ts: new Date(),
-                text: `[${seg.nombre}] ${m.tipo}: ${m.texto}`,
-                role: "assistant"
-            })));
-            await db.collection("CampaignLogs").insertOne({
+            const ins = await db.collection("CampaignLogs").insertOne({
                 logId: id,
                 campaignRef: id,
-                audience: `${(publico.edad?.min || "")}-${(publico.edad?.max || "")} ${(publico.intereses || []).join(", ")} ${(publico.ubicaciones || []).join(", ")}`.trim(),
+                audience: audienceStr,
                 messages,
-                messageCount: messages.length,
-                lastMessageTs: messages.length ? messages[messages.length - 1].ts : new Date(),
-                metaJson: JSON.stringify({ bitacora, segmentos, calendario, metricas, recomendaciones }),
-                createdAt: new Date()
+                messageCount,
+                lastMessageTs,
+                createdAt
             });
+            insertedIdStr = ins?.insertedId ? String(ins.insertedId) : undefined;
             await db.collection("AIRequests").insertOne({
                 aiRequestId: id,
-                createdAt: new Date(),
+                createdAt,
                 completedAt: new Date(),
                 status: "completed",
+                modality: "text",
                 prompt: descripcion,
                 context: {
                     type: "text",
                     language: "es",
                     campaignRef: id
                 },
-                requestBody: publico,
+                requestBody: { audiencias: auds },
                 mcp: { serverKey: "mcp-server-promptcontent", tool: "generateCampaignMessages" }
             });
         }
-        catch {
-            // si falla el log en Mongo, no rompemos la respuesta MCP
+        catch (e) {
+            console.error("CampaignLogs/AIRequests persistence error", e);
         }
         const output = {
-            id,
-            bitacora,
-            segmentos,
-            calendario,
-            metricas,
-            recomendaciones: recomendaciones.slice(0, 5)
+            _id: insertedIdStr,
+            logId: id,
+            campaignRef: id,
+            audience: auds.map((a) => ({
+                edad: a.edad || null,
+                intereses: a.intereses || [],
+                ubicaciones: a.ubicaciones || [],
+                genero: a.genero || null,
+                nivelSocioeconomico: a.nivelSocioeconomico || null
+            })),
+            messages: messages.map((m) => ({ role: m.role, text: m.text, ts: m.ts.toISOString() })),
+            messageCount: messageCountNum,
+            lastMessageTs: lastMessageTs.toISOString(),
+            createdAt: createdAt.toISOString()
         };
-        return { content: [{ type: "text", text: JSON.stringify(output, null, 2) }], structuredContent: output };
+        return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
     });
     return server;
 }

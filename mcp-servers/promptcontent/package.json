@@ -2,7 +2,8 @@
     "name": "mcp-server-promptcontent",
     "version": "1.0.0",
     "description": "MCP server for PromptAds (Kubernetes deployment)",
-    "main": "src/server.ts",
+    "type": "commonjs",
+    "main": "build/server.js",
     "scripts": {
         "server:build": "tsc",
         "server:build:watch": "tsc --watch",

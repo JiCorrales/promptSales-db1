@@ -272,8 +272,21 @@ function parseSegmentsPayload(raw: string) {
     return null
 }
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+function fallbackSegments(descripcion: string, auds: any[]) {
+    const base = (descripcion || "").trim().slice(0, 140)
+    const mk = (t: string) => ({ tipo: t, texto: `${base}` })
+    return [
+        {
+            nombre: "Awareness",
+            mensajes: [mk("awareness"), mk("consideration"), mk("conversion")]
+        }
+    ]
+}
+
 async function generateMessagesWithAI(descripcion: string, auds: any[]) {
+    const key = process.env.OPENAI_API_KEY
+    if (!key) return fallbackSegments(descripcion, auds)
+    const client = new OpenAI({ apiKey: key })
     const system = `
 Eres un generador de campañas de marketing.
 Devuelve SOLO un JSON válido, con esta forma exacta:
@@ -330,14 +343,13 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
 
             if (allGood) return parsed.segmentos
         } catch (e: any) {
-            console.error(`Error intento ${attempt}:`, e)
             if (e?.status === 429 || e?.code === "insufficient_quota") {
                 return []
             }
         }
     }
 
-    return []
+    return fallbackSegments(descripcion, auds)
 }
 
 

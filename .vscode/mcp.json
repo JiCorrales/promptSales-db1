@@ -14,9 +14,9 @@
 		},
 		"PromptContent": {
 			"type": "stdio",
-			"command": "node",
+			"command": "C:\\Program Files\\nodejs\\node.exe",
 			"args": [
-				"mcp-servers/promptcontent/src/server.js"
+				"mcp-servers/promptcontent/build/server.js"
 			],
 			"env": {
 				"PC_DEFAULT_CHANNELS": "instagram,tiktok,facebook",
@@ -25,7 +25,7 @@
 				"PC_KEYWORD_MAX": "6",
 				"PC_MESSAGE_TEMPLATES": "[{\"stage\":\"Descubrimiento\",\"pattern\":\"Hola {{audience}}, notamos que {{pain}}. {{campaignDescription}}\"},{\"stage\":\"Consideracion\",\"pattern\":\"Imagina {{audience}} alcanzando {{motivation}} con nuestra oferta.\"},{\"stage\":\"Conversion\",\"pattern\":\"{{cta}}: visita {{channel}} para aprovechar el beneficio.\"}]",
 				"MONGODB_URI": "mongodb://localhost:27017",
-				"MONGODB_DB_NAME": "promptcontent_dev",
+				"MONGODB_DB": "promptcontent_dev",
 				"PC_CONTENT_REQUESTS_COLLECTION": "ContentRequests",
 				"PC_CAMPAIGN_LOGS_COLLECTION": "CampaignLogs",
 				"PROMPTCONTENT_NO_LISTEN": "1",
