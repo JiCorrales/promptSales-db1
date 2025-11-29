@@ -1,0 +1,1820 @@
+USE [PromptAds]
+GO
+/****** Object:  Table [dbo].[AccountsAPI]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AccountsAPI](
+	[AccountId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CompanyId] [bigint] NOT NULL,
+	[SupplierId] [bigint] NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[active] [bit] NOT NULL,
+ CONSTRAINT [PK_AccountsAPI] PRIMARY KEY CLUSTERED 
+(
+	[AccountId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AdAudience]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AdAudience](
+	[AdAudienceId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[TargetAudienceId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_AdAudience] PRIMARY KEY CLUSTERED 
+(
+	[AdAudienceId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Addresses]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Addresses](
+	[AddressId] [bigint] IDENTITY(1,1) NOT NULL,
+	[Address1] [varchar](200) NOT NULL,
+	[Address2] [varchar](200) NULL,
+	[zipCode] [int] NULL,
+	[CityId] [bigint] NOT NULL,
+ CONSTRAINT [PK_Addresses] PRIMARY KEY CLUSTERED 
+(
+	[AddressId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AdMedias]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AdMedias](
+	[AdMediaId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[MediaId] [bigint] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[deleted] [bit] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_AdMedias] PRIMARY KEY CLUSTERED 
+(
+	[AdMediaId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AdMetricsDaily]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AdMetricsDaily](
+	[AdMetricDailyId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[AdMediaId] [bigint] NOT NULL,
+	[posttime] [datetime] NOT NULL,
+	[impressions] [bigint] NOT NULL,
+	[clicks] [bigint] NOT NULL,
+	[interactions] [bigint] NOT NULL,
+	[publicReach] [bigint] NOT NULL,
+	[hoursViewed] [decimal](18, 3) NOT NULL,
+	[cost] [decimal](18, 2) NOT NULL,
+	[revenue] [decimal](18, 2) NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[likes] [bigint] NOT NULL,
+	[salesCount] [bigint] NOT NULL,
+ CONSTRAINT [PK_AdMetricsDaily] PRIMARY KEY CLUSTERED 
+(
+	[AdMetricDailyId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Ads]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Ads](
+	[AdId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CampaignId] [bigint] NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[description] [varchar](400) NULL,
+	[createdAt] [datetime] NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[AdStatusId] [int] NOT NULL,
+	[AdTypeId] [int] NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[deleted] [bit] NOT NULL,
+	[processed] [varchar](60) NULL,
+ CONSTRAINT [PK_Ads] PRIMARY KEY CLUSTERED 
+(
+	[AdId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AdStatus]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AdStatus](
+	[AdStatusId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+ CONSTRAINT [PK_AdStatus] PRIMARY KEY CLUSTERED 
+(
+	[AdStatusId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AdTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AdTypes](
+	[AdTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+ CONSTRAINT [PK_AdTypes] PRIMARY KEY CLUSTERED 
+(
+	[AdTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AudienceFeatures]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AudienceFeatures](
+	[AudienceFeatureId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[datatype] [varchar](40) NOT NULL,
+ CONSTRAINT [PK_AudienceFeatures] PRIMARY KEY CLUSTERED 
+(
+	[AudienceFeatureId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_AudienceFeatures_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AudienceValues]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AudienceValues](
+	[AudienceValue] [bigint] IDENTITY(1,1) NOT NULL,
+	[AudienceFeatureId] [bigint] NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[minValue] [int] NULL,
+	[maxValue] [int] NULL,
+	[value] [int] NULL,
+ CONSTRAINT [PK_AudienceValues] PRIMARY KEY CLUSTERED 
+(
+	[AudienceValue] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[AuditAI]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[AuditAI](
+	[AuditId] [bigint] IDENTITY(1,1) NOT NULL,
+	[UserId] [bigint] NOT NULL,
+	[tool] [varchar](120) NOT NULL,
+	[prompt] [varchar](max) NOT NULL,
+	[output] [varchar](max) NOT NULL,
+	[ValidMethodId] [int] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[comments] [varchar](1000) NULL,
+	[model] [varchar](100) NULL,
+	[entryTokens] [int] NULL,
+	[outputTokens] [int] NULL,
+ CONSTRAINT [PK_AuditAI] PRIMARY KEY CLUSTERED 
+(
+	[AuditId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Brands]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Brands](
+	[BrandId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CompanyId] [bigint] NOT NULL,
+	[name] [varchar](150) NOT NULL,
+	[description] [varchar](300) NULL,
+ CONSTRAINT [PK_Brands] PRIMARY KEY CLUSTERED 
+(
+	[BrandId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CampaignMarkets]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CampaignMarkets](
+	[CampaignMarketId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CampaignId] [bigint] NOT NULL,
+	[MarketId] [bigint] NOT NULL,
+ CONSTRAINT [PK_CampaignMarkets] PRIMARY KEY CLUSTERED 
+(
+	[CampaignMarketId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Campaigns]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Campaigns](
+	[CampaignId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](150) NOT NULL,
+	[description] [varchar](400) NULL,
+	[createdAt] [datetime] NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[startDate] [datetime] NOT NULL,
+	[endDate] [datetime] NOT NULL,
+	[budget] [decimal](18, 2) NOT NULL,
+	[CompanyId] [bigint] NOT NULL,
+	[CampaignStatusId] [int] NOT NULL,
+	[BrandId] [bigint] NULL,
+ CONSTRAINT [PK_Campaigns] PRIMARY KEY CLUSTERED 
+(
+	[CampaignId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CampaignStatus]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CampaignStatus](
+	[CampaignStatusId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](50) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_CampaignStatus] PRIMARY KEY CLUSTERED 
+(
+	[CampaignStatusId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CampaignTransactions]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CampaignTransactions](
+	[CampaignTransId] [bigint] IDENTITY(1,1) NOT NULL,
+	[description] [varchar](300) NULL,
+	[amount] [decimal](18, 2) NOT NULL,
+	[CampaignTransTypeId] [int] NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[PaymentId] [bigint] NOT NULL,
+	[MediaId] [bigint] NOT NULL,
+	[checksum] [char](64) NULL,
+	[updatedAt] [datetime] NULL,
+ CONSTRAINT [PK_CampaignTransactions] PRIMARY KEY CLUSTERED 
+(
+	[CampaignTransId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CampaignTransactionTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CampaignTransactionTypes](
+	[CampaignTransTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_CampaignTransactionTypes] PRIMARY KEY CLUSTERED 
+(
+	[CampaignTransTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Channels]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Channels](
+	[ChannelId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](150) NOT NULL,
+ CONSTRAINT [PK_Channels] PRIMARY KEY CLUSTERED 
+(
+	[ChannelId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Channels_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ChannelsPerAd]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ChannelsPerAd](
+	[ChannelAdId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[ChannelId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_ChannelsPerAd] PRIMARY KEY CLUSTERED 
+(
+	[ChannelAdId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Cities]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Cities](
+	[CityId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[StateId] [bigint] NOT NULL,
+ CONSTRAINT [PK_Cities] PRIMARY KEY CLUSTERED 
+(
+	[CityId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Companies]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Companies](
+	[CompanyId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CompStatusId] [int] NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[legalName] [varchar](150) NOT NULL,
+	[email] [varchar](300) NOT NULL,
+	[active] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_Companies] PRIMARY KEY CLUSTERED 
+(
+	[CompanyId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Companies_LegalName] UNIQUE NONCLUSTERED 
+(
+	[legalName] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Companies_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CompanyAddresses]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CompanyAddresses](
+	[CompanyAddressId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CompanyId] [bigint] NOT NULL,
+	[AddressId] [bigint] NOT NULL,
+	[isPrimary] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_CompanyAddresses] PRIMARY KEY CLUSTERED 
+(
+	[CompanyAddressId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CompanyStatus]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CompanyStatus](
+	[CompStatusId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+ CONSTRAINT [PK_CompanyStatus] PRIMARY KEY CLUSTERED 
+(
+	[CompStatusId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_CompanyStatus_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ContactTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ContactTypes](
+	[ContactTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_ContactTypes] PRIMARY KEY CLUSTERED 
+(
+	[ContactTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_ContactTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Countries]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Countries](
+	[CountryId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+ CONSTRAINT [PK_Countries] PRIMARY KEY CLUSTERED 
+(
+	[CountryId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Countries_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Currencies]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Currencies](
+	[CurrencyId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](60) NOT NULL,
+	[isoCode] [char](3) NOT NULL,
+	[CountryId] [int] NOT NULL,
+ CONSTRAINT [PK_Currencies] PRIMARY KEY CLUSTERED 
+(
+	[CurrencyId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Currencies_IsoCode] UNIQUE NONCLUSTERED 
+(
+	[isoCode] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ETLWatermark]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ETLWatermark](
+	[ProcessId] [bigint] IDENTITY(1,1) NOT NULL,
+	[processName] [varchar](100) NOT NULL,
+	[LastSuccessAt] [datetime] NOT NULL,
+	[Notes] [varchar](200) NULL,
+ CONSTRAINT [PK_ETLWatermark] PRIMARY KEY CLUSTERED 
+(
+	[ProcessId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[FeaturePerSubscription]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FeaturePerSubscription](
+	[FeaturePerSubId] [bigint] IDENTITY(1,1) NOT NULL,
+	[SubscriptionId] [bigint] NOT NULL,
+	[SubFeatureId] [bigint] NOT NULL,
+	[value] [varchar](120) NULL,
+ CONSTRAINT [PK_FeaturePerSubscription] PRIMARY KEY CLUSTERED 
+(
+	[FeaturePerSubId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[FirstNames]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FirstNames](
+	[FirstNameId] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [varchar](80) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[FirstNameId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[InfluencerContacts]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[InfluencerContacts](
+	[ContactId] [bigint] IDENTITY(1,1) NOT NULL,
+	[InfluencerId] [bigint] NOT NULL,
+	[ContactTypeId] [int] NOT NULL,
+	[value] [varchar](200) NULL,
+	[number] [int] NULL,
+	[createdAt] [datetime] NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[deleted] [bit] NOT NULL,
+ CONSTRAINT [PK_InfluencerContacts] PRIMARY KEY CLUSTERED 
+(
+	[ContactId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Influencers]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Influencers](
+	[InfluencerId] [bigint] IDENTITY(1,1) NOT NULL,
+	[username] [varchar](150) NOT NULL,
+	[followers] [bigint] NULL,
+	[bio] [varchar](300) NULL,
+	[ChannelId] [bigint] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[active] [bit] NOT NULL,
+ CONSTRAINT [PK_Influencers] PRIMARY KEY CLUSTERED 
+(
+	[InfluencerId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[InfluencersPerAd]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[InfluencersPerAd](
+	[InfluencerAdId] [bigint] IDENTITY(1,1) NOT NULL,
+	[InfluencerId] [bigint] NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[fee] [decimal](18, 2) NULL,
+	[contractRef] [varchar](120) NULL,
+	[posttime] [datetime] NOT NULL,
+	[updatedAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_InfluencersPerAd] PRIMARY KEY CLUSTERED 
+(
+	[InfluencerAdId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LastNames]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[LastNames](
+	[LastNameId] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [varchar](80) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[LastNameId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LogLevels]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[LogLevels](
+	[LogLevelId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](200) NOT NULL,
+ CONSTRAINT [PK_LogLevels] PRIMARY KEY CLUSTERED 
+(
+	[LogLevelId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_LogLevels_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Logs]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Logs](
+	[LogId] [bigint] IDENTITY(1,1) NOT NULL,
+	[description] [varchar](400) NULL,
+	[computer] [varchar](100) NOT NULL,
+	[username] [varchar](120) NOT NULL,
+	[LogTypeId] [bigint] NOT NULL,
+	[LogLevelId] [bigint] NOT NULL,
+	[LogSourceId] [bigint] NOT NULL,
+	[RefId] [bigint] NULL,
+	[UserId] [bigint] NOT NULL,
+	[toolName] [varchar](100) NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_Logs] PRIMARY KEY CLUSTERED 
+(
+	[LogId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LogSources]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[LogSources](
+	[LogSourceId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](200) NOT NULL,
+ CONSTRAINT [PK_LogSources] PRIMARY KEY CLUSTERED 
+(
+	[LogSourceId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_LogSources_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LogTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[LogTypes](
+	[LogTypeId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](200) NOT NULL,
+ CONSTRAINT [PK_LogTypes] PRIMARY KEY CLUSTERED 
+(
+	[LogTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_LogTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Markets]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Markets](
+	[MarketId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](150) NOT NULL,
+	[description] [varchar](300) NULL,
+	[CountryId] [int] NULL,
+	[StateId] [bigint] NULL,
+	[CityId] [bigint] NULL,
+ CONSTRAINT [PK_Markets] PRIMARY KEY CLUSTERED 
+(
+	[MarketId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Media]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Media](
+	[MediaId] [bigint] IDENTITY(1,1) NOT NULL,
+	[MediaTypeId] [int] NOT NULL,
+	[URL] [varchar](400) NOT NULL,
+ CONSTRAINT [PK_Media] PRIMARY KEY CLUSTERED 
+(
+	[MediaId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[MediaTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[MediaTypes](
+	[MediaTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](80) NOT NULL,
+ CONSTRAINT [PK_MediaTypes] PRIMARY KEY CLUSTERED 
+(
+	[MediaTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_MediaTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Numbers]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Numbers](
+	[n] [int] NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[n] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PaymentMethods]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PaymentMethods](
+	[PayMethodId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_PaymentMethods] PRIMARY KEY CLUSTERED 
+(
+	[PayMethodId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_PaymentMethods_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Payments]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Payments](
+	[PaymentId] [bigint] IDENTITY(1,1) NOT NULL,
+	[PayMethodId] [int] NOT NULL,
+	[PayTypeId] [int] NOT NULL,
+	[payAmount] [decimal](18, 2) NOT NULL,
+	[CurrencyId] [int] NOT NULL,
+	[description] [varchar](400) NULL,
+	[createdAt] [datetime] NOT NULL,
+	[checksum] [char](64) NOT NULL,
+	[PayStatusId] [int] NOT NULL,
+ CONSTRAINT [PK_Payments] PRIMARY KEY CLUSTERED 
+(
+	[PaymentId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PaymentStatuses]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PaymentStatuses](
+	[PayStatusId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_PaymentStatuses] PRIMARY KEY CLUSTERED 
+(
+	[PayStatusId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_PaymentStatuses_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PaymentTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PaymentTypes](
+	[PayTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[description] [varchar](400) NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_PaymentTypes] PRIMARY KEY CLUSTERED 
+(
+	[PayTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_PaymentTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Permissions]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Permissions](
+	[PermissionId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[description] [varchar](300) NULL,
+	[code] [varchar](40) NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_Permissions] PRIMARY KEY CLUSTERED 
+(
+	[PermissionId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Permissions_Code] UNIQUE NONCLUSTERED 
+(
+	[code] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PermissionsPerRole]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PermissionsPerRole](
+	[PermissionRoleId] [bigint] IDENTITY(1,1) NOT NULL,
+	[RoleId] [int] NOT NULL,
+	[PermissionId] [int] NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[checksum] [char](64) NOT NULL,
+ CONSTRAINT [PK_PermissionsPerRole] PRIMARY KEY CLUSTERED 
+(
+	[PermissionRoleId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ReactionsPerAd]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ReactionsPerAd](
+	[ReactionPerAdId] [bigint] IDENTITY(1,1) NOT NULL,
+	[ReactionTypeId] [bigint] NOT NULL,
+	[AdId] [bigint] NOT NULL,
+ CONSTRAINT [PK_ReactionsPerAd] PRIMARY KEY CLUSTERED 
+(
+	[ReactionPerAdId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ReactionTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ReactionTypes](
+	[ReactionTypeId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+ CONSTRAINT [PK_ReactionTypes] PRIMARY KEY CLUSTERED 
+(
+	[ReactionTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_ReactionTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[RequestMethods]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RequestMethods](
+	[MethodId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](10) NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_RequestMethods] PRIMARY KEY CLUSTERED 
+(
+	[MethodId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_RequestMethods_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[RequestsAPI]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RequestsAPI](
+	[RequestId] [bigint] NOT NULL,
+	[SupplierId] [bigint] NOT NULL,
+	[AccountId] [bigint] NOT NULL,
+	[CampaignId] [bigint] NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[endpoint] [varchar](300) NOT NULL,
+	[MethodId] [int] NOT NULL,
+	[payloadHash] [char](64) NOT NULL,
+	[StateId] [int] NOT NULL,
+	[responseTime] [int] NULL,
+	[createdAt] [datetime] NOT NULL,
+	[retries] [int] NOT NULL,
+	[lastError] [varchar](500) NULL,
+ CONSTRAINT [PK_RequestsAPI] PRIMARY KEY CLUSTERED 
+(
+	[RequestId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[RequestStates]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RequestStates](
+	[StateId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](50) NOT NULL,
+	[description] [varchar](200) NULL,
+ CONSTRAINT [PK_RequestStates] PRIMARY KEY CLUSTERED 
+(
+	[StateId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Roles]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Roles](
+	[RoleId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[description] [varchar](400) NULL,
+	[createdAt] [datetime] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_Roles] PRIMARY KEY CLUSTERED 
+(
+	[RoleId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Roles_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[RolesPerUser]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RolesPerUser](
+	[RoleUserId] [bigint] IDENTITY(1,1) NOT NULL,
+	[UserId] [bigint] NOT NULL,
+	[RoleId] [int] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[checksum] [char](64) NOT NULL,
+ CONSTRAINT [PK_RolesPerUser] PRIMARY KEY CLUSTERED 
+(
+	[RoleUserId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ScheduleRecurrencies]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ScheduleRecurrencies](
+	[SchRecurrencyId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](80) NOT NULL,
+	[active] [bit] NOT NULL,
+ CONSTRAINT [PK_ScheduleRecurrencies] PRIMARY KEY CLUSTERED 
+(
+	[SchRecurrencyId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Schedules]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Schedules](
+	[ScheduleId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[SchRecurrencyId] [int] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[enabled] [bit] NOT NULL,
+	[starting] [datetime] NOT NULL,
+	[ending] [datetime] NOT NULL,
+ CONSTRAINT [PK_Schedules] PRIMARY KEY CLUSTERED 
+(
+	[ScheduleId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SchedulesPerAd]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SchedulesPerAd](
+	[ScheduleAdId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[ScheduleId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_SchedulesPerAd] PRIMARY KEY CLUSTERED 
+(
+	[ScheduleAdId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SentimentTypes]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SentimentTypes](
+	[SentimentTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](50) NOT NULL,
+	[description] [varchar](200) NULL,
+ CONSTRAINT [PK_SentimentTypes] PRIMARY KEY CLUSTERED 
+(
+	[SentimentTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_SentimentTypes_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SocialFeeling]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SocialFeeling](
+	[SocialFeelingId] [bigint] IDENTITY(1,1) NOT NULL,
+	[AdId] [bigint] NOT NULL,
+	[InfluencerId] [bigint] NOT NULL,
+	[AdMediaId] [bigint] NOT NULL,
+	[feelingScore] [decimal](4, 2) NOT NULL,
+	[sampleSize] [int] NOT NULL,
+	[details] [varchar](400) NULL,
+	[posttime] [datetime] NOT NULL,
+	[updatedAt] [datetime] NULL,
+	[SentimentTypeId] [int] NULL,
+ CONSTRAINT [PK_SocialFeeling] PRIMARY KEY CLUSTERED 
+(
+	[SocialFeelingId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[States]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[States](
+	[StateId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[CountryId] [int] NOT NULL,
+ CONSTRAINT [PK_States] PRIMARY KEY CLUSTERED 
+(
+	[StateId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SubscriptionFeatures]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SubscriptionFeatures](
+	[SubFeatureId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[description] [varchar](300) NOT NULL,
+ CONSTRAINT [PK_SubscriptionFeatures] PRIMARY KEY CLUSTERED 
+(
+	[SubFeatureId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_SubscriptionFeatures_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SubscriptionPerUser]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SubscriptionPerUser](
+	[SubPerUserId] [bigint] IDENTITY(1,1) NOT NULL,
+	[UserId] [bigint] NOT NULL,
+	[SubscriptionId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_SubscriptionPerUser] PRIMARY KEY CLUSTERED 
+(
+	[SubPerUserId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Subscriptions]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Subscriptions](
+	[SubscriptionId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[description] [varchar](300) NULL,
+	[createdAt] [datetime] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_Subscriptions] PRIMARY KEY CLUSTERED 
+(
+	[SubscriptionId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Subscriptions_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SuppliersAPI]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SuppliersAPI](
+	[SupplierId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[SupTypeId] [int] NOT NULL,
+	[base_url] [varchar](300) NOT NULL,
+	[documentation_url] [varchar](300) NOT NULL,
+	[active] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_SuppliersAPI] PRIMARY KEY CLUSTERED 
+(
+	[SupplierId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [IX_SuppliersAPI] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SuppliersType]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SuppliersType](
+	[SupTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](60) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_SuppliersType] PRIMARY KEY CLUSTERED 
+(
+	[SupTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_SuppliersType_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TargetAudience]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TargetAudience](
+	[TargetAudienceId] [bigint] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](150) NOT NULL,
+	[description] [varchar](300) NULL,
+ CONSTRAINT [PK_TargetAudience] PRIMARY KEY CLUSTERED 
+(
+	[TargetAudienceId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_TargetAudience_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TargetConfig]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TargetConfig](
+	[TargetConfigId] [bigint] IDENTITY(1,1) NOT NULL,
+	[TargetAudienceId] [bigint] NOT NULL,
+	[AudienceValueId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_TargetConfig] PRIMARY KEY CLUSTERED 
+(
+	[TargetConfigId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[UserPerCompany]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[UserPerCompany](
+	[UserCompanyId] [bigint] IDENTITY(1,1) NOT NULL,
+	[CompanyId] [bigint] NOT NULL,
+	[UserId] [bigint] NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_UserPerCompany] PRIMARY KEY CLUSTERED 
+(
+	[UserCompanyId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Users]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Users](
+	[UserId] [bigint] IDENTITY(1,1) NOT NULL,
+	[UserStatusId] [int] NOT NULL,
+	[firstName] [varchar](80) NOT NULL,
+	[lastName] [varchar](80) NOT NULL,
+	[email] [varchar](300) NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+	[updatedAt] [datetime] NOT NULL,
+	[active] [bit] NOT NULL,
+	[passwordHash] [varbinary](256) NOT NULL,
+	[checksum] [char](64) NOT NULL,
+	[lastLogin] [datetime] NULL,
+	[username] [varchar](120) NOT NULL,
+ CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED 
+(
+	[UserId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Users_Email] UNIQUE NONCLUSTERED 
+(
+	[email] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_Users_Username] UNIQUE NONCLUSTERED 
+(
+	[username] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[UserStatus]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[UserStatus](
+	[UserStatusId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](120) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_UserStatus] PRIMARY KEY CLUSTERED 
+(
+	[UserStatusId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_UserStatus_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ValidationMethods]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ValidationMethods](
+	[ValidMethodId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[description] [varchar](300) NULL,
+ CONSTRAINT [PK_ValidationMethods] PRIMARY KEY CLUSTERED 
+(
+	[ValidMethodId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[WebhooksAPI]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[WebhooksAPI](
+	[WebhookId] [bigint] IDENTITY(1,1) NOT NULL,
+	[SupplierId] [bigint] NOT NULL,
+	[WHTypeId] [int] NOT NULL,
+	[secret] [varbinary](max) NOT NULL,
+	[enabled] [bit] NOT NULL,
+	[createdAt] [datetime] NOT NULL,
+ CONSTRAINT [PK_WebhooksAPI] PRIMARY KEY CLUSTERED 
+(
+	[WebhookId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[WebhookType]    Script Date: 29/11/2025 15:25:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[WebhookType](
+	[WHTypeId] [int] IDENTITY(1,1) NOT NULL,
+	[name] [varchar](60) NOT NULL,
+	[enabled] [bit] NOT NULL,
+ CONSTRAINT [PK_WebhookType] PRIMARY KEY CLUSTERED 
+(
+	[WHTypeId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_WebhookType_Name] UNIQUE NONCLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[AdAudience] ADD  CONSTRAINT [DF_AdAudience_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[AdMedias] ADD  CONSTRAINT [DF_AdMedias_deleted]  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[AdMedias] ADD  CONSTRAINT [DF_AdMedias_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[AdMetricsDaily] ADD  CONSTRAINT [DF_AdMetricsDaily_likes]  DEFAULT ((0)) FOR [likes]
+GO
+ALTER TABLE [dbo].[AdMetricsDaily] ADD  CONSTRAINT [DF_AdMetricsDaily_salesCount]  DEFAULT ((0)) FOR [salesCount]
+GO
+ALTER TABLE [dbo].[Ads] ADD  CONSTRAINT [DF_Ads_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Ads] ADD  CONSTRAINT [DF_Ads_deleted]  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[Campaigns] ADD  CONSTRAINT [DF_Campaigns_CampaignStatus]  DEFAULT ((1)) FOR [CampaignStatusId]
+GO
+ALTER TABLE [dbo].[CampaignStatus] ADD  CONSTRAINT [DF_CampaignStatus_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[CampaignTransactionTypes] ADD  CONSTRAINT [DF_CampaignTransactionTypes_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[ChannelsPerAd] ADD  CONSTRAINT [DF_ChannelsPerAd_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[CompanyAddresses] ADD  CONSTRAINT [DF_CompanyAddresses_isPrimary]  DEFAULT ((1)) FOR [isPrimary]
+GO
+ALTER TABLE [dbo].[CompanyAddresses] ADD  CONSTRAINT [DF_CompanyAddresses_createdAt]  DEFAULT (getdate()) FOR [createdAt]
+GO
+ALTER TABLE [dbo].[ContactTypes] ADD  CONSTRAINT [DF_ContactTypes_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[InfluencerContacts] ADD  CONSTRAINT [DF_InfluencerContacts_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[InfluencerContacts] ADD  CONSTRAINT [DF_InfluencerContacts_deleted]  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[Influencers] ADD  CONSTRAINT [DF_Influencers_active]  DEFAULT ((1)) FOR [active]
+GO
+ALTER TABLE [dbo].[InfluencersPerAd] ADD  CONSTRAINT [DF_InfluencersPerAd_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Logs] ADD  CONSTRAINT [DF_Logs_createdAt]  DEFAULT (getdate()) FOR [createdAt]
+GO
+ALTER TABLE [dbo].[PaymentMethods] ADD  CONSTRAINT [DF_PaymentMethods_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[PaymentStatuses] ADD  CONSTRAINT [DF_PaymentStatuses_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[PaymentTypes] ADD  CONSTRAINT [DF_PaymentTypes_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Permissions] ADD  CONSTRAINT [DF_Permissions_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[PermissionsPerRole] ADD  CONSTRAINT [DF_PermissionsPerRole_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Roles] ADD  CONSTRAINT [DF_Roles_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[RolesPerUser] ADD  CONSTRAINT [DF_RolesPerUser_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Schedules] ADD  CONSTRAINT [DF_Schedules_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[SchedulesPerAd] ADD  CONSTRAINT [DF_SchedulesPerAd_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[SubscriptionPerUser] ADD  CONSTRAINT [DF_SubscriptionPerUser_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Subscriptions] ADD  CONSTRAINT [DF_Subscriptions_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[TargetConfig] ADD  CONSTRAINT [DF_TargetConfig_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[UserPerCompany] ADD  CONSTRAINT [DF_UserPerCompany_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[Users] ADD  CONSTRAINT [DF_Users_active]  DEFAULT ((1)) FOR [active]
+GO
+ALTER TABLE [dbo].[UserStatus] ADD  CONSTRAINT [DF_UserStatus_enabled]  DEFAULT ((1)) FOR [enabled]
+GO
+ALTER TABLE [dbo].[AccountsAPI]  WITH CHECK ADD  CONSTRAINT [FK_AccountsAPI_Companies] FOREIGN KEY([CompanyId])
+REFERENCES [dbo].[Companies] ([CompanyId])
+GO
+ALTER TABLE [dbo].[AccountsAPI] CHECK CONSTRAINT [FK_AccountsAPI_Companies]
+GO
+ALTER TABLE [dbo].[AccountsAPI]  WITH CHECK ADD  CONSTRAINT [FK_AccountsAPI_SuppliersAPI] FOREIGN KEY([SupplierId])
+REFERENCES [dbo].[SuppliersAPI] ([SupplierId])
+GO
+ALTER TABLE [dbo].[AccountsAPI] CHECK CONSTRAINT [FK_AccountsAPI_SuppliersAPI]
+GO
+ALTER TABLE [dbo].[AdAudience]  WITH CHECK ADD  CONSTRAINT [FK_AdAudience_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[AdAudience] CHECK CONSTRAINT [FK_AdAudience_Ads]
+GO
+ALTER TABLE [dbo].[AdAudience]  WITH CHECK ADD  CONSTRAINT [FK_AdAudience_TargetAudience] FOREIGN KEY([TargetAudienceId])
+REFERENCES [dbo].[TargetAudience] ([TargetAudienceId])
+GO
+ALTER TABLE [dbo].[AdAudience] CHECK CONSTRAINT [FK_AdAudience_TargetAudience]
+GO
+ALTER TABLE [dbo].[Addresses]  WITH CHECK ADD  CONSTRAINT [FK_Addresses_Cities] FOREIGN KEY([CityId])
+REFERENCES [dbo].[Cities] ([CityId])
+GO
+ALTER TABLE [dbo].[Addresses] CHECK CONSTRAINT [FK_Addresses_Cities]
+GO
+ALTER TABLE [dbo].[AdMedias]  WITH CHECK ADD  CONSTRAINT [FK_AdMedias_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[AdMedias] CHECK CONSTRAINT [FK_AdMedias_Ads]
+GO
+ALTER TABLE [dbo].[AdMedias]  WITH CHECK ADD  CONSTRAINT [FK_AdMedias_Media] FOREIGN KEY([MediaId])
+REFERENCES [dbo].[Media] ([MediaId])
+GO
+ALTER TABLE [dbo].[AdMedias] CHECK CONSTRAINT [FK_AdMedias_Media]
+GO
+ALTER TABLE [dbo].[AdMetricsDaily]  WITH CHECK ADD  CONSTRAINT [FK_AdMetricsDaily_AdMedias] FOREIGN KEY([AdMediaId])
+REFERENCES [dbo].[AdMedias] ([AdMediaId])
+GO
+ALTER TABLE [dbo].[AdMetricsDaily] CHECK CONSTRAINT [FK_AdMetricsDaily_AdMedias]
+GO
+ALTER TABLE [dbo].[AdMetricsDaily]  WITH CHECK ADD  CONSTRAINT [FK_AdMetricsDaily_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[AdMetricsDaily] CHECK CONSTRAINT [FK_AdMetricsDaily_Ads]
+GO
+ALTER TABLE [dbo].[Ads]  WITH CHECK ADD  CONSTRAINT [FK_Ads_AdStatus] FOREIGN KEY([AdStatusId])
+REFERENCES [dbo].[AdStatus] ([AdStatusId])
+GO
+ALTER TABLE [dbo].[Ads] CHECK CONSTRAINT [FK_Ads_AdStatus]
+GO
+ALTER TABLE [dbo].[Ads]  WITH CHECK ADD  CONSTRAINT [FK_Ads_AdTypes] FOREIGN KEY([AdTypeId])
+REFERENCES [dbo].[AdTypes] ([AdTypeId])
+GO
+ALTER TABLE [dbo].[Ads] CHECK CONSTRAINT [FK_Ads_AdTypes]
+GO
+ALTER TABLE [dbo].[Ads]  WITH CHECK ADD  CONSTRAINT [FK_Ads_Campaigns] FOREIGN KEY([CampaignId])
+REFERENCES [dbo].[Campaigns] ([CampaignId])
+GO
+ALTER TABLE [dbo].[Ads] CHECK CONSTRAINT [FK_Ads_Campaigns]
+GO
+ALTER TABLE [dbo].[AudienceValues]  WITH CHECK ADD  CONSTRAINT [FK_AudienceValues_AudienceFeatures] FOREIGN KEY([AudienceFeatureId])
+REFERENCES [dbo].[AudienceFeatures] ([AudienceFeatureId])
+GO
+ALTER TABLE [dbo].[AudienceValues] CHECK CONSTRAINT [FK_AudienceValues_AudienceFeatures]
+GO
+ALTER TABLE [dbo].[AuditAI]  WITH CHECK ADD  CONSTRAINT [FK_AuditAI_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[AuditAI] CHECK CONSTRAINT [FK_AuditAI_Users]
+GO
+ALTER TABLE [dbo].[AuditAI]  WITH CHECK ADD  CONSTRAINT [FK_AuditAI_ValidationMethods] FOREIGN KEY([ValidMethodId])
+REFERENCES [dbo].[ValidationMethods] ([ValidMethodId])
+GO
+ALTER TABLE [dbo].[AuditAI] CHECK CONSTRAINT [FK_AuditAI_ValidationMethods]
+GO
+ALTER TABLE [dbo].[Brands]  WITH CHECK ADD  CONSTRAINT [FK_Brands_Companies] FOREIGN KEY([CompanyId])
+REFERENCES [dbo].[Companies] ([CompanyId])
+GO
+ALTER TABLE [dbo].[Brands] CHECK CONSTRAINT [FK_Brands_Companies]
+GO
+ALTER TABLE [dbo].[CampaignMarkets]  WITH CHECK ADD  CONSTRAINT [FK_CampaignMarkets_Campaigns] FOREIGN KEY([CampaignId])
+REFERENCES [dbo].[Campaigns] ([CampaignId])
+GO
+ALTER TABLE [dbo].[CampaignMarkets] CHECK CONSTRAINT [FK_CampaignMarkets_Campaigns]
+GO
+ALTER TABLE [dbo].[CampaignMarkets]  WITH CHECK ADD  CONSTRAINT [FK_CampaignMarkets_Markets] FOREIGN KEY([MarketId])
+REFERENCES [dbo].[Markets] ([MarketId])
+GO
+ALTER TABLE [dbo].[CampaignMarkets] CHECK CONSTRAINT [FK_CampaignMarkets_Markets]
+GO
+ALTER TABLE [dbo].[Campaigns]  WITH CHECK ADD  CONSTRAINT [FK_Campaigns_Brands] FOREIGN KEY([BrandId])
+REFERENCES [dbo].[Brands] ([BrandId])
+GO
+ALTER TABLE [dbo].[Campaigns] CHECK CONSTRAINT [FK_Campaigns_Brands]
+GO
+ALTER TABLE [dbo].[Campaigns]  WITH CHECK ADD  CONSTRAINT [FK_Campaigns_CampaignStatus] FOREIGN KEY([CampaignStatusId])
+REFERENCES [dbo].[CampaignStatus] ([CampaignStatusId])
+GO
+ALTER TABLE [dbo].[Campaigns] CHECK CONSTRAINT [FK_Campaigns_CampaignStatus]
+GO
+ALTER TABLE [dbo].[Campaigns]  WITH CHECK ADD  CONSTRAINT [FK_Campaigns_Companies] FOREIGN KEY([CompanyId])
+REFERENCES [dbo].[Companies] ([CompanyId])
+GO
+ALTER TABLE [dbo].[Campaigns] CHECK CONSTRAINT [FK_Campaigns_Companies]
+GO
+ALTER TABLE [dbo].[CampaignTransactions]  WITH CHECK ADD  CONSTRAINT [FK_CampaignTransactions_Ads1] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[CampaignTransactions] CHECK CONSTRAINT [FK_CampaignTransactions_Ads1]
+GO
+ALTER TABLE [dbo].[CampaignTransactions]  WITH CHECK ADD  CONSTRAINT [FK_CampaignTransactions_CampaignTransactionTypes] FOREIGN KEY([CampaignTransTypeId])
+REFERENCES [dbo].[CampaignTransactionTypes] ([CampaignTransTypeId])
+GO
+ALTER TABLE [dbo].[CampaignTransactions] CHECK CONSTRAINT [FK_CampaignTransactions_CampaignTransactionTypes]
+GO
+ALTER TABLE [dbo].[CampaignTransactions]  WITH CHECK ADD  CONSTRAINT [FK_CampaignTransactions_Media] FOREIGN KEY([MediaId])
+REFERENCES [dbo].[Media] ([MediaId])
+GO
+ALTER TABLE [dbo].[CampaignTransactions] CHECK CONSTRAINT [FK_CampaignTransactions_Media]
+GO
+ALTER TABLE [dbo].[CampaignTransactions]  WITH CHECK ADD  CONSTRAINT [FK_CampaignTransactions_Payments] FOREIGN KEY([PaymentId])
+REFERENCES [dbo].[Payments] ([PaymentId])
+GO
+ALTER TABLE [dbo].[CampaignTransactions] CHECK CONSTRAINT [FK_CampaignTransactions_Payments]
+GO
+ALTER TABLE [dbo].[ChannelsPerAd]  WITH CHECK ADD  CONSTRAINT [FK_ChannelsPerAd_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[ChannelsPerAd] CHECK CONSTRAINT [FK_ChannelsPerAd_Ads]
+GO
+ALTER TABLE [dbo].[ChannelsPerAd]  WITH CHECK ADD  CONSTRAINT [FK_ChannelsPerAd_Channels] FOREIGN KEY([ChannelId])
+REFERENCES [dbo].[Channels] ([ChannelId])
+GO
+ALTER TABLE [dbo].[ChannelsPerAd] CHECK CONSTRAINT [FK_ChannelsPerAd_Channels]
+GO
+ALTER TABLE [dbo].[Cities]  WITH CHECK ADD  CONSTRAINT [FK_Cities_States] FOREIGN KEY([StateId])
+REFERENCES [dbo].[States] ([StateId])
+GO
+ALTER TABLE [dbo].[Cities] CHECK CONSTRAINT [FK_Cities_States]
+GO
+ALTER TABLE [dbo].[Companies]  WITH CHECK ADD  CONSTRAINT [FK_Companies_CompanyStatus] FOREIGN KEY([CompStatusId])
+REFERENCES [dbo].[CompanyStatus] ([CompStatusId])
+GO
+ALTER TABLE [dbo].[Companies] CHECK CONSTRAINT [FK_Companies_CompanyStatus]
+GO
+ALTER TABLE [dbo].[CompanyAddresses]  WITH CHECK ADD  CONSTRAINT [FK_CompanyAddresses_Addresses] FOREIGN KEY([AddressId])
+REFERENCES [dbo].[Addresses] ([AddressId])
+GO
+ALTER TABLE [dbo].[CompanyAddresses] CHECK CONSTRAINT [FK_CompanyAddresses_Addresses]
+GO
+ALTER TABLE [dbo].[CompanyAddresses]  WITH CHECK ADD  CONSTRAINT [FK_CompanyAddresses_Companies] FOREIGN KEY([CompanyId])
+REFERENCES [dbo].[Companies] ([CompanyId])
+GO
+ALTER TABLE [dbo].[CompanyAddresses] CHECK CONSTRAINT [FK_CompanyAddresses_Companies]
+GO
+ALTER TABLE [dbo].[Currencies]  WITH CHECK ADD  CONSTRAINT [FK_Currencies_Countries] FOREIGN KEY([CountryId])
+REFERENCES [dbo].[Countries] ([CountryId])
+GO
+ALTER TABLE [dbo].[Currencies] CHECK CONSTRAINT [FK_Currencies_Countries]
+GO
+ALTER TABLE [dbo].[FeaturePerSubscription]  WITH CHECK ADD  CONSTRAINT [FK_FeaturePerSubscription_SubscriptionFeatures] FOREIGN KEY([SubFeatureId])
+REFERENCES [dbo].[SubscriptionFeatures] ([SubFeatureId])
+GO
+ALTER TABLE [dbo].[FeaturePerSubscription] CHECK CONSTRAINT [FK_FeaturePerSubscription_SubscriptionFeatures]
+GO
+ALTER TABLE [dbo].[FeaturePerSubscription]  WITH CHECK ADD  CONSTRAINT [FK_FeaturePerSubscription_Subscriptions] FOREIGN KEY([SubscriptionId])
+REFERENCES [dbo].[Subscriptions] ([SubscriptionId])
+GO
+ALTER TABLE [dbo].[FeaturePerSubscription] CHECK CONSTRAINT [FK_FeaturePerSubscription_Subscriptions]
+GO
+ALTER TABLE [dbo].[InfluencerContacts]  WITH CHECK ADD  CONSTRAINT [FK_InfluencerContacts_ContactTypes] FOREIGN KEY([ContactTypeId])
+REFERENCES [dbo].[ContactTypes] ([ContactTypeId])
+GO
+ALTER TABLE [dbo].[InfluencerContacts] CHECK CONSTRAINT [FK_InfluencerContacts_ContactTypes]
+GO
+ALTER TABLE [dbo].[InfluencerContacts]  WITH CHECK ADD  CONSTRAINT [FK_InfluencerContacts_Influencers] FOREIGN KEY([InfluencerId])
+REFERENCES [dbo].[Influencers] ([InfluencerId])
+GO
+ALTER TABLE [dbo].[InfluencerContacts] CHECK CONSTRAINT [FK_InfluencerContacts_Influencers]
+GO
+ALTER TABLE [dbo].[Influencers]  WITH CHECK ADD  CONSTRAINT [FK_Influencers_Channels] FOREIGN KEY([ChannelId])
+REFERENCES [dbo].[Channels] ([ChannelId])
+GO
+ALTER TABLE [dbo].[Influencers] CHECK CONSTRAINT [FK_Influencers_Channels]
+GO
+ALTER TABLE [dbo].[InfluencersPerAd]  WITH CHECK ADD  CONSTRAINT [FK_InfluencersPerAd_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[InfluencersPerAd] CHECK CONSTRAINT [FK_InfluencersPerAd_Ads]
+GO
+ALTER TABLE [dbo].[InfluencersPerAd]  WITH CHECK ADD  CONSTRAINT [FK_InfluencersPerAd_Influencers] FOREIGN KEY([InfluencerId])
+REFERENCES [dbo].[Influencers] ([InfluencerId])
+GO
+ALTER TABLE [dbo].[InfluencersPerAd] CHECK CONSTRAINT [FK_InfluencersPerAd_Influencers]
+GO
+ALTER TABLE [dbo].[Logs]  WITH CHECK ADD  CONSTRAINT [FK_Logs_LogLevels] FOREIGN KEY([LogLevelId])
+REFERENCES [dbo].[LogLevels] ([LogLevelId])
+GO
+ALTER TABLE [dbo].[Logs] CHECK CONSTRAINT [FK_Logs_LogLevels]
+GO
+ALTER TABLE [dbo].[Logs]  WITH CHECK ADD  CONSTRAINT [FK_Logs_LogSources] FOREIGN KEY([LogSourceId])
+REFERENCES [dbo].[LogSources] ([LogSourceId])
+GO
+ALTER TABLE [dbo].[Logs] CHECK CONSTRAINT [FK_Logs_LogSources]
+GO
+ALTER TABLE [dbo].[Logs]  WITH CHECK ADD  CONSTRAINT [FK_Logs_LogTypes] FOREIGN KEY([LogTypeId])
+REFERENCES [dbo].[LogTypes] ([LogTypeId])
+GO
+ALTER TABLE [dbo].[Logs] CHECK CONSTRAINT [FK_Logs_LogTypes]
+GO
+ALTER TABLE [dbo].[Markets]  WITH CHECK ADD  CONSTRAINT [FK_Markets_Cities] FOREIGN KEY([CityId])
+REFERENCES [dbo].[Cities] ([CityId])
+GO
+ALTER TABLE [dbo].[Markets] CHECK CONSTRAINT [FK_Markets_Cities]
+GO
+ALTER TABLE [dbo].[Markets]  WITH CHECK ADD  CONSTRAINT [FK_Markets_Countries] FOREIGN KEY([CountryId])
+REFERENCES [dbo].[Countries] ([CountryId])
+GO
+ALTER TABLE [dbo].[Markets] CHECK CONSTRAINT [FK_Markets_Countries]
+GO
+ALTER TABLE [dbo].[Markets]  WITH CHECK ADD  CONSTRAINT [FK_Markets_States] FOREIGN KEY([StateId])
+REFERENCES [dbo].[States] ([StateId])
+GO
+ALTER TABLE [dbo].[Markets] CHECK CONSTRAINT [FK_Markets_States]
+GO
+ALTER TABLE [dbo].[Media]  WITH CHECK ADD  CONSTRAINT [FK_Media_MediaTypes] FOREIGN KEY([MediaTypeId])
+REFERENCES [dbo].[MediaTypes] ([MediaTypeId])
+GO
+ALTER TABLE [dbo].[Media] CHECK CONSTRAINT [FK_Media_MediaTypes]
+GO
+ALTER TABLE [dbo].[Payments]  WITH CHECK ADD  CONSTRAINT [FK_Payments_Currencies] FOREIGN KEY([CurrencyId])
+REFERENCES [dbo].[Currencies] ([CurrencyId])
+GO
+ALTER TABLE [dbo].[Payments] CHECK CONSTRAINT [FK_Payments_Currencies]
+GO
+ALTER TABLE [dbo].[Payments]  WITH CHECK ADD  CONSTRAINT [FK_Payments_PaymentMethods] FOREIGN KEY([PayMethodId])
+REFERENCES [dbo].[PaymentMethods] ([PayMethodId])
+GO
+ALTER TABLE [dbo].[Payments] CHECK CONSTRAINT [FK_Payments_PaymentMethods]
+GO
+ALTER TABLE [dbo].[Payments]  WITH CHECK ADD  CONSTRAINT [FK_Payments_PaymentStatuses] FOREIGN KEY([PayStatusId])
+REFERENCES [dbo].[PaymentStatuses] ([PayStatusId])
+GO
+ALTER TABLE [dbo].[Payments] CHECK CONSTRAINT [FK_Payments_PaymentStatuses]
+GO
+ALTER TABLE [dbo].[Payments]  WITH CHECK ADD  CONSTRAINT [FK_Payments_PaymentTypes] FOREIGN KEY([PayTypeId])
+REFERENCES [dbo].[PaymentTypes] ([PayTypeId])
+GO
+ALTER TABLE [dbo].[Payments] CHECK CONSTRAINT [FK_Payments_PaymentTypes]
+GO
+ALTER TABLE [dbo].[PermissionsPerRole]  WITH CHECK ADD  CONSTRAINT [FK_PermissionsPerRole_Permissions] FOREIGN KEY([PermissionId])
+REFERENCES [dbo].[Permissions] ([PermissionId])
+GO
+ALTER TABLE [dbo].[PermissionsPerRole] CHECK CONSTRAINT [FK_PermissionsPerRole_Permissions]
+GO
+ALTER TABLE [dbo].[PermissionsPerRole]  WITH CHECK ADD  CONSTRAINT [FK_PermissionsPerRole_Roles] FOREIGN KEY([RoleId])
+REFERENCES [dbo].[Roles] ([RoleId])
+GO
+ALTER TABLE [dbo].[PermissionsPerRole] CHECK CONSTRAINT [FK_PermissionsPerRole_Roles]
+GO
+ALTER TABLE [dbo].[ReactionsPerAd]  WITH CHECK ADD  CONSTRAINT [FK_ReactionsPerAd_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[ReactionsPerAd] CHECK CONSTRAINT [FK_ReactionsPerAd_Ads]
+GO
+ALTER TABLE [dbo].[ReactionsPerAd]  WITH CHECK ADD  CONSTRAINT [FK_ReactionsPerAd_ReactionTypes] FOREIGN KEY([ReactionTypeId])
+REFERENCES [dbo].[ReactionTypes] ([ReactionTypeId])
+GO
+ALTER TABLE [dbo].[ReactionsPerAd] CHECK CONSTRAINT [FK_ReactionsPerAd_ReactionTypes]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_AccountsAPI] FOREIGN KEY([AccountId])
+REFERENCES [dbo].[AccountsAPI] ([AccountId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_AccountsAPI]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_Ads]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_Campaigns] FOREIGN KEY([CampaignId])
+REFERENCES [dbo].[Campaigns] ([CampaignId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_Campaigns]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_RequestMethods] FOREIGN KEY([MethodId])
+REFERENCES [dbo].[RequestMethods] ([MethodId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_RequestMethods]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_RequestStates] FOREIGN KEY([StateId])
+REFERENCES [dbo].[RequestStates] ([StateId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_RequestStates]
+GO
+ALTER TABLE [dbo].[RequestsAPI]  WITH CHECK ADD  CONSTRAINT [FK_RequestsAPI_SuppliersAPI] FOREIGN KEY([SupplierId])
+REFERENCES [dbo].[SuppliersAPI] ([SupplierId])
+GO
+ALTER TABLE [dbo].[RequestsAPI] CHECK CONSTRAINT [FK_RequestsAPI_SuppliersAPI]
+GO
+ALTER TABLE [dbo].[RolesPerUser]  WITH CHECK ADD  CONSTRAINT [FK_RolesPerUser_Roles] FOREIGN KEY([RoleId])
+REFERENCES [dbo].[Roles] ([RoleId])
+GO
+ALTER TABLE [dbo].[RolesPerUser] CHECK CONSTRAINT [FK_RolesPerUser_Roles]
+GO
+ALTER TABLE [dbo].[RolesPerUser]  WITH CHECK ADD  CONSTRAINT [FK_RolesPerUser_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[RolesPerUser] CHECK CONSTRAINT [FK_RolesPerUser_Users]
+GO
+ALTER TABLE [dbo].[Schedules]  WITH CHECK ADD  CONSTRAINT [FK_Schedules_ScheduleRecurrencies] FOREIGN KEY([SchRecurrencyId])
+REFERENCES [dbo].[ScheduleRecurrencies] ([SchRecurrencyId])
+GO
+ALTER TABLE [dbo].[Schedules] CHECK CONSTRAINT [FK_Schedules_ScheduleRecurrencies]
+GO
+ALTER TABLE [dbo].[SchedulesPerAd]  WITH CHECK ADD  CONSTRAINT [FK_SchedulesPerAd_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[SchedulesPerAd] CHECK CONSTRAINT [FK_SchedulesPerAd_Ads]
+GO
+ALTER TABLE [dbo].[SchedulesPerAd]  WITH CHECK ADD  CONSTRAINT [FK_SchedulesPerAd_Schedules] FOREIGN KEY([ScheduleId])
+REFERENCES [dbo].[Schedules] ([ScheduleId])
+GO
+ALTER TABLE [dbo].[SchedulesPerAd] CHECK CONSTRAINT [FK_SchedulesPerAd_Schedules]
+GO
+ALTER TABLE [dbo].[SocialFeeling]  WITH CHECK ADD  CONSTRAINT [FK_SocialFeeling_AdMedias] FOREIGN KEY([AdMediaId])
+REFERENCES [dbo].[AdMedias] ([AdMediaId])
+GO
+ALTER TABLE [dbo].[SocialFeeling] CHECK CONSTRAINT [FK_SocialFeeling_AdMedias]
+GO
+ALTER TABLE [dbo].[SocialFeeling]  WITH CHECK ADD  CONSTRAINT [FK_SocialFeeling_Ads] FOREIGN KEY([AdId])
+REFERENCES [dbo].[Ads] ([AdId])
+GO
+ALTER TABLE [dbo].[SocialFeeling] CHECK CONSTRAINT [FK_SocialFeeling_Ads]
+GO
+ALTER TABLE [dbo].[SocialFeeling]  WITH CHECK ADD  CONSTRAINT [FK_SocialFeeling_Influencers] FOREIGN KEY([InfluencerId])
+REFERENCES [dbo].[Influencers] ([InfluencerId])
+GO
+ALTER TABLE [dbo].[SocialFeeling] CHECK CONSTRAINT [FK_SocialFeeling_Influencers]
+GO
+ALTER TABLE [dbo].[SocialFeeling]  WITH CHECK ADD  CONSTRAINT [FK_SocialFeeling_SentimentTypes] FOREIGN KEY([SentimentTypeId])
+REFERENCES [dbo].[SentimentTypes] ([SentimentTypeId])
+GO
+ALTER TABLE [dbo].[SocialFeeling] CHECK CONSTRAINT [FK_SocialFeeling_SentimentTypes]
+GO
+ALTER TABLE [dbo].[States]  WITH CHECK ADD  CONSTRAINT [FK_States_Countries] FOREIGN KEY([CountryId])
+REFERENCES [dbo].[Countries] ([CountryId])
+GO
+ALTER TABLE [dbo].[States] CHECK CONSTRAINT [FK_States_Countries]
+GO
+ALTER TABLE [dbo].[SubscriptionPerUser]  WITH CHECK ADD  CONSTRAINT [FK_SubscriptionPerUser_Subscriptions] FOREIGN KEY([SubscriptionId])
+REFERENCES [dbo].[Subscriptions] ([SubscriptionId])
+GO
+ALTER TABLE [dbo].[SubscriptionPerUser] CHECK CONSTRAINT [FK_SubscriptionPerUser_Subscriptions]
+GO
+ALTER TABLE [dbo].[SubscriptionPerUser]  WITH CHECK ADD  CONSTRAINT [FK_SubscriptionPerUser_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[SubscriptionPerUser] CHECK CONSTRAINT [FK_SubscriptionPerUser_Users]
+GO
+ALTER TABLE [dbo].[SuppliersAPI]  WITH CHECK ADD  CONSTRAINT [FK_SuppliersAPI_SuppliersType] FOREIGN KEY([SupTypeId])
+REFERENCES [dbo].[SuppliersType] ([SupTypeId])
+GO
+ALTER TABLE [dbo].[SuppliersAPI] CHECK CONSTRAINT [FK_SuppliersAPI_SuppliersType]
+GO
+ALTER TABLE [dbo].[TargetConfig]  WITH CHECK ADD  CONSTRAINT [FK_TargetConfig_AudienceValues] FOREIGN KEY([AudienceValueId])
+REFERENCES [dbo].[AudienceValues] ([AudienceValue])
+GO
+ALTER TABLE [dbo].[TargetConfig] CHECK CONSTRAINT [FK_TargetConfig_AudienceValues]
+GO
+ALTER TABLE [dbo].[TargetConfig]  WITH CHECK ADD  CONSTRAINT [FK_TargetConfig_TargetAudience] FOREIGN KEY([TargetAudienceId])
+REFERENCES [dbo].[TargetAudience] ([TargetAudienceId])
+GO
+ALTER TABLE [dbo].[TargetConfig] CHECK CONSTRAINT [FK_TargetConfig_TargetAudience]
+GO
+ALTER TABLE [dbo].[UserPerCompany]  WITH CHECK ADD  CONSTRAINT [FK_UserPerCompany_Companies] FOREIGN KEY([CompanyId])
+REFERENCES [dbo].[Companies] ([CompanyId])
+GO
+ALTER TABLE [dbo].[UserPerCompany] CHECK CONSTRAINT [FK_UserPerCompany_Companies]
+GO
+ALTER TABLE [dbo].[UserPerCompany]  WITH CHECK ADD  CONSTRAINT [FK_UserPerCompany_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[UserPerCompany] CHECK CONSTRAINT [FK_UserPerCompany_Users]
+GO
+ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK_Users_UserStatus] FOREIGN KEY([UserStatusId])
+REFERENCES [dbo].[UserStatus] ([UserStatusId])
+GO
+ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK_Users_UserStatus]
+GO
+ALTER TABLE [dbo].[WebhooksAPI]  WITH CHECK ADD  CONSTRAINT [FK_WebhooksAPI_SuppliersAPI] FOREIGN KEY([SupplierId])
+REFERENCES [dbo].[SuppliersAPI] ([SupplierId])
+GO
+ALTER TABLE [dbo].[WebhooksAPI] CHECK CONSTRAINT [FK_WebhooksAPI_SuppliersAPI]
+GO
+ALTER TABLE [dbo].[WebhooksAPI]  WITH CHECK ADD  CONSTRAINT [FK_WebhooksAPI_WebhookType] FOREIGN KEY([WHTypeId])
+REFERENCES [dbo].[WebhookType] ([WHTypeId])
+GO
+ALTER TABLE [dbo].[WebhooksAPI] CHECK CONSTRAINT [FK_WebhooksAPI_WebhookType]
+GO

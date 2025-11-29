@@ -11,7 +11,7 @@ GO
 ========================================================*/
 
 /*---------------------------------------------------------
-  Países, estados, ciudades
+  Paï¿½ses, estados, ciudades
 ---------------------------------------------------------*/
 
 -- Countries
@@ -20,9 +20,9 @@ SELECT v.name
 FROM (VALUES 
     ('Costa Rica'),
     ('Estados Unidos'),
-    ('México'),
+    ('Mï¿½xico'),
     ('Colombia'),
-    ('España')
+    ('Espaï¿½a')
 ) v(name)
 WHERE NOT EXISTS (
     SELECT 1 FROM dbo.Countries c WHERE c.name = v.name
@@ -32,11 +32,11 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.States(name, CountryId)
 SELECT v.name, c.CountryId
 FROM (VALUES
-    ('San José',       'Costa Rica'),
+    ('San Josï¿½',       'Costa Rica'),
     ('Alajuela',       'Costa Rica'),
     ('New York',       'Estados Unidos'),
     ('California',     'Estados Unidos'),
-    ('Ciudad de México','México')
+    ('Ciudad de Mï¿½xico','Mï¿½xico')
 ) v(name, countryName)
 JOIN dbo.Countries c ON c.name = v.countryName
 WHERE NOT EXISTS (
@@ -48,12 +48,12 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.Cities (name, StateId)
 SELECT v.name, s.StateId
 FROM (VALUES
-    ('San José',    'San José'),
+    ('San Josï¿½',    'San Josï¿½'),
     ('Alajuela',    'Alajuela'),
-    ('Heredia',     'San José'),
+    ('Heredia',     'San Josï¿½'),
     ('New York',    'New York'),
-    ('Los Ángeles', 'California'),
-    ('CDMX',        'Ciudad de México')
+    ('Los ï¿½ngeles', 'California'),
+    ('CDMX',        'Ciudad de Mï¿½xico')
 ) v(name, stateName)
 JOIN dbo.States s ON s.name = v.stateName
 WHERE NOT EXISTS (
@@ -62,7 +62,7 @@ WHERE NOT EXISTS (
 );
 GO
 
-/* Direcciones básicas para Companies  */
+/* Direcciones bï¿½sicas para Companies  */
 INSERT INTO dbo.Addresses(Address1, Address2, zipCode, CityId)
 SELECT v.Address1, v.Address2, v.zipCode, v.CityId
 FROM (
@@ -80,7 +80,7 @@ WHERE NOT EXISTS (
 GO
 
 /*---------------------------------------------------------
-  Catálogos de estado/estatus básicos
+  Catï¿½logos de estado/estatus bï¿½sicos
 ---------------------------------------------------------*/
 
 -- CompanyStatus
@@ -130,7 +130,7 @@ INSERT INTO dbo.AdStatus(name)
 SELECT v.name
 FROM (VALUES
     ('Borrador'),
-    ('Pendiente Aprobación'),
+    ('Pendiente Aprobaciï¿½n'),
     ('Activo'),
     ('Pausado'),
     ('Finalizado')
@@ -206,8 +206,8 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.PaymentMethods(name, enabled)
 SELECT v.name, v.enabled
 FROM (VALUES
-    ('Tarjeta Crédito',1),
-    ('Tarjeta Débito',1),
+    ('Tarjeta Crï¿½dito',1),
+    ('Tarjeta Dï¿½bito',1),
     ('Transferencia',1),
     ('PayPal',1)
 ) v(name, enabled)
@@ -230,8 +230,8 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.PaymentTypes(name, description, enabled)
 SELECT v.name, v.description, v.enabled
 FROM (VALUES
-    ('Prepago','Pago anticipado de campaña',1),
-    ('Postpago','Pago al cierre de campaña',1),
+    ('Prepago','Pago anticipado de campaï¿½a',1),
+    ('Postpago','Pago al cierre de campaï¿½a',1),
     ('Mensual','Pago recurrente mensual',1)
 ) v(name, description, enabled)
 WHERE NOT EXISTS (
@@ -242,9 +242,9 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.Currencies(name, isoCode, CountryId)
 SELECT v.name, v.isoCode, c.CountryId
 FROM (VALUES
-    ('Colón costarricense','CRC','Costa Rica'),
-    ('Dólar estadounidense','USD','Estados Unidos'),
-    ('Euro','EUR','España')
+    ('Colï¿½n costarricense','CRC','Costa Rica'),
+    ('Dï¿½lar estadounidense','USD','Estados Unidos'),
+    ('Euro','EUR','Espaï¿½a')
 ) v(name, isoCode, countryName)
 JOIN dbo.Countries c ON c.name = v.countryName
 WHERE NOT EXISTS (
@@ -256,7 +256,7 @@ INSERT INTO dbo.Roles(name, description, createdAt, enabled)
 SELECT v.name, v.description, GETDATE(), v.enabled
 FROM (VALUES
     ('Admin','Administrador del sistema',1),
-    ('CampaignManager','Gestor de campañas',1),
+    ('CampaignManager','Gestor de campaï¿½as',1),
     ('Analyst','Analista de datos',1)
 ) v(name, description, enabled)
 WHERE NOT EXISTS (
@@ -267,9 +267,9 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.Permissions(name, description, code, enabled, createdAt)
 SELECT v.name, v.description, v.code, 1, GETDATE()
 FROM (VALUES
-    ('Ver campañas','Puede ver campañas','CAMPAIGN_VIEW'),
-    ('Editar campañas','Puede editar campañas','CAMPAIGN_EDIT'),
-    ('Ver métricas','Puede ver métricas','METRICS_VIEW'),
+    ('Ver campaï¿½as','Puede ver campaï¿½as','CAMPAIGN_VIEW'),
+    ('Editar campaï¿½as','Puede editar campaï¿½as','CAMPAIGN_EDIT'),
+    ('Ver mï¿½tricas','Puede ver mï¿½tricas','METRICS_VIEW'),
     ('Administrar usuarios','Administra usuarios','USER_ADMIN')
 ) v(name, description, code)
 WHERE NOT EXISTS (
@@ -293,7 +293,7 @@ INSERT INTO dbo.ContactTypes(name, enabled)
 SELECT v.name, v.enabled
 FROM (VALUES
     ('Email',1),
-    ('Teléfono',1),
+    ('Telï¿½fono',1),
     ('WhatsApp',1),
     ('Instagram DM',1),
     ('TikTok DM',1)
@@ -306,7 +306,7 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.Subscriptions(name, description, createdAt, enabled)
 SELECT v.name, v.description, GETDATE(), 1
 FROM (VALUES
-    ('Starter','Plan básico para pequeñas empresas'),
+    ('Starter','Plan bï¿½sico para pequeï¿½as empresas'),
     ('Growth','Plan intermedio para crecimiento'),
     ('Enterprise','Plan avanzado para grandes empresas')
 ) v(name, description)
@@ -318,10 +318,10 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.SubscriptionFeatures(name, description)
 SELECT v.name, v.description
 FROM (VALUES
-    ('Límite de campañas mensuales','Cantidad máxima de campañas que se pueden crear al mes'),
+    ('Lï¿½mite de campaï¿½as mensuales','Cantidad mï¿½xima de campaï¿½as que se pueden crear al mes'),
     ('Soporte prioritario','Nivel de soporte y SLA'),
-    ('Integración con CRM','Capacidad de integrarse a CRM externos'),
-    ('Límites de presupuesto','Restricciones de presupuesto por campaña'),
+    ('Integraciï¿½n con CRM','Capacidad de integrarse a CRM externos'),
+    ('Lï¿½mites de presupuesto','Restricciones de presupuesto por campaï¿½a'),
     ('Reportes avanzados','Acceso a visualizaciones y reportes avanzados')
 ) v(name, description)
 WHERE NOT EXISTS (
@@ -332,7 +332,7 @@ WHERE NOT EXISTS (
 INSERT INTO dbo.FeaturePerSubscription(SubscriptionId, SubFeatureId, value)
 SELECT s.SubscriptionId, f.SubFeatureId,
        CASE s.name
-            WHEN 'Starter'    THEN 'Básico'
+            WHEN 'Starter'    THEN 'Bï¿½sico'
             WHEN 'Growth'     THEN 'Intermedio'
             WHEN 'Enterprise' THEN 'Avanzado'
        END
@@ -429,7 +429,7 @@ BEGIN
         ('PENDING','Solicitud enviada, esperando respuesta'),
         ('SUCCESS','Respuesta correcta'),
         ('FAILED','Error en la solicitud'),
-        ('RETRYING','Se está reintentando')
+        ('RETRYING','Se estï¿½ reintentando')
     ) v(name, description)
     WHERE NOT EXISTS (
         SELECT 1 FROM dbo.RequestStates rs WHERE rs.name = v.name
@@ -457,10 +457,10 @@ BEGIN
     INSERT INTO dbo.ValidationMethods(name, description)
     SELECT v.name, v.description
     FROM (VALUES
-        ('Revisión manual rápida','Validación manual por el usuario'),
-        ('Comparación con dataset','Comparación con datos de referencia'),
-        ('Pruebas unitarias','Uso de tests automáticos'),
-        ('Revisión por par','Revisión de otra persona del equipo')
+        ('Revisiï¿½n manual rï¿½pida','Validaciï¿½n manual por el usuario'),
+        ('Comparaciï¿½n con dataset','Comparaciï¿½n con datos de referencia'),
+        ('Pruebas unitarias','Uso de tests automï¿½ticos'),
+        ('Revisiï¿½n por par','Revisiï¿½n de otra persona del equipo')
     ) v(name, description)
     WHERE NOT EXISTS (
         SELECT 1 FROM dbo.ValidationMethods vm WHERE vm.name = v.name
