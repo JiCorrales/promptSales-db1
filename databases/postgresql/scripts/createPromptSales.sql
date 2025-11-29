@@ -5,7 +5,7 @@
 
 
 CREATE TABLE IF NOT EXISTS public."User"
-(
+(   
     id integer NOT NULL,
     "userNationalId" integer NOT NULL,
     "userFirstName" character varying(30) NOT NULL,
@@ -610,7 +610,7 @@ CREATE TABLE IF NOT EXISTS public."SubBilling"
 );
 
 CREATE TABLE IF NOT EXISTS public."RawPromptAds" (
-  -- Datos de la vista 
+  -- Datos de la vista
   campaign_id           BIGINT,
   campaign_name         VARCHAR(200),
   start_date            TIMESTAMPTZ,
@@ -627,8 +627,8 @@ CREATE TABLE IF NOT EXISTS public."RawPromptAds" (
   ad_status             VARCHAR(50),
   ad_type               VARCHAR(50),
 
-  channels              TEXT,         
-  target_markets        TEXT,         
+  channels              TEXT,
+  target_markets        TEXT,
 
   total_impressions     BIGINT,
   total_clicks          BIGINT,
@@ -638,11 +638,11 @@ CREATE TABLE IF NOT EXISTS public."RawPromptAds" (
   total_cost            NUMERIC(14,2),
   total_revenue         NUMERIC(14,2),
 
-  snapshot_date         DATE NOT NULL DEFAULT CURRENT_DATE, 
+  snapshot_date         DATE NOT NULL DEFAULT CURRENT_DATE,
   source_system         VARCHAR(30) NOT NULL DEFAULT 'PromptAds',
   source_view           VARCHAR(128) NOT NULL DEFAULT 'dbo.vwPromptAdsSimpleSummary',
   etl_run_id            BIGINT,
-  raw_checksum          CHAR(64),      
+  raw_checksum          CHAR(64),
   load_ts               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   raw_id                BIGSERIAL PRIMARY KEY
@@ -1191,5 +1191,3 @@ ALTER TABLE IF EXISTS public."ETLDeltas"
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
-
-

@@ -424,6 +424,7 @@ async function semanticSearch(query: string, tagsFilter?: string[]) {
  *
  * @returns {McpServer} Servidor MCP listo para conectarse a un transporte.
  */
+//TODO: mejorar tipado de respuestas estructuradas
 export function createPromptContentServer() {
     const server = new McpServer({
         name: "mcp-server-promptcontent",
@@ -436,7 +437,7 @@ export function createPromptContentServer() {
         "getContent",
         {
             title: "Buscar imágenes por descripción",
-            description: "recibe una descripción textual y retorna imágenes que coinciden y sus hashtags",
+            description: "Busca imágenes relevantes (ES/EN) en MongoDB/Pinecone a partir de una descripción y devuelve URLs con metadatos más hashtags sugeridos",
             inputSchema: {
                 descripcion: z.string().describe("Descripción textual para buscar imágenes")
             },
