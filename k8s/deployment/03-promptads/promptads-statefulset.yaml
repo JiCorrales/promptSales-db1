@@ -1,36 +1,39 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: promptcrm-data
-  namespace: promptcrm
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: standard
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: promptcrm
-  namespace: promptcrm
+  name: promptads
+  namespace: promptads
+  labels:
+    app: promptads
+    tier: database
 spec:
-  serviceName: "promptcrm"
+  serviceName: "promptads"
   replicas: 1
   selector:
     matchLabels:
-      app: promptcrm
+      app: promptads
   template:
     metadata:
       labels:
-        app: promptcrm
+        app: promptads
+        tier: database
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - promptads
+              topologyKey: kubernetes.io/hostname
       securityContext:
-        fsGroup: 10001              # Permisos de /var/opt/mssql
+        fsGroup: 10001  # Permisos de /var/opt/mssql
       containers:
-        - name: promptcrm
+        - name: promptads
           image: mcr.microsoft.com/mssql/server:2022-latest
           imagePullPolicy: IfNotPresent
           ports:
@@ -44,18 +47,18 @@ spec:
             - name: MSSQL_SA_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: promptcrm-secret
+                  name: promptads-secret
                   key: SA_PASSWORD
           volumeMounts:
             - name: data
               mountPath: /var/opt/mssql
           resources:
             requests:
-              cpu: "3"
-              memory: "5Gi"
+              cpu: "1"
+              memory: "2Gi"
             limits:
-              cpu: "5"
-              memory: "7Gi"
+              cpu: "2"
+              memory: "3Gi"
           readinessProbe:
             tcpSocket:
               port: 1433
@@ -69,18 +72,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: promptcrm-data
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: promptcrm
-  namespace: promptcrm
-spec:
-  type: LoadBalancer
-  selector:
-    app: promptcrm
-  ports:
-    - name: tds
-      port: 1433
-      targetPort: 1433
+            claimName: promptads-data

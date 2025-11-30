@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: promptcrm-pdb
+  namespace: promptcrm
+  labels:
+    app: promptcrm
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: promptcrm

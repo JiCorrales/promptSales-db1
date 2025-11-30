@@ -1,8 +1,27 @@
-databases/sqlserver/promptads/PromptAds.mdf
+# Kubernetes secrets
+*-secret.yaml
+secrets*.yaml
 
-databases/sqlserver/promptads/PromptAds_log.ldf
-mcp-servers/promptcontent/node_modules
-local/.env
-mcp-servers/promptcontent/.env
-mcp-servers/promptcontent/.env.local
-mcp-servers/promptads/node_modules
+# Temporary files
+*.tmp
+*.temp
+temp_*.sql
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test outputs
+test-output/
+*.out
+DEPLOYMENT.md
+.gitignore

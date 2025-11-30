@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: promptads-pdb
+  namespace: promptads
+  labels:
+    app: promptads
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: promptads

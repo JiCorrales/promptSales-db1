@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: promptcrm-networkpolicy
+  namespace: promptcrm
+  labels:
+    app: promptcrm
+    tier: database
+spec:
+  podSelector:
+    matchLabels:
+      app: promptcrm
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            app: promptsales
+      ports:
+        - protocol: TCP
+          port: 1433
+  egress:
+    # Permitir DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Permitir comunicación con PromptAds (linked server)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: ads
+      ports:
+        - protocol: TCP
+          port: 1433
+    # Permitir comunicación con PostgreSQL (PromptSales)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: central
+      ports:
+        - protocol: TCP
+          port: 5432

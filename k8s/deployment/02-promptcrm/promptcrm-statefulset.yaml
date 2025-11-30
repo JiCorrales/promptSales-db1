@@ -1,21 +1,11 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: promptcrm-data
-  namespace: promptcrm
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: standard
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: promptcrm
   namespace: promptcrm
+  labels:
+    app: promptcrm
+    tier: database
 spec:
   serviceName: "promptcrm"
   replicas: 1
@@ -26,9 +16,22 @@ spec:
     metadata:
       labels:
         app: promptcrm
+        tier: database
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - promptcrm
+              topologyKey: kubernetes.io/hostname
       securityContext:
-        fsGroup: 10001              # Permisos de /var/opt/mssql
+        fsGroup: 10001  # Permisos de /var/opt/mssql
       containers:
         - name: promptcrm
           image: mcr.microsoft.com/mssql/server:2022-latest
@@ -70,17 +73,3 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: promptcrm-data
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: promptcrm
-  namespace: promptcrm
-spec:
-  type: LoadBalancer
-  selector:
-    app: promptcrm
-  ports:
-    - name: tds
-      port: 1433
-      targetPort: 1433

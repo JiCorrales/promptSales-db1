@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres
+  namespace: promptcontent-dev
+data:
+  POSTGRES_DB: "PromptContent"
+  POSTGRES_USER: "User"
+  POSTGRES_PASSWORD: "UserPassword123!"

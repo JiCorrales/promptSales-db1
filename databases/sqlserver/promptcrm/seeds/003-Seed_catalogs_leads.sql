@@ -99,11 +99,12 @@ VALUES
     (7, 'HUBSPOT', 'HubSpot', 'HubSpot CRM', 1),
     (8, 'SALESFORCE', 'Salesforce', 'Salesforce CRM', 1),
     (9, 'GOOGLE_SEARCH', 'Google Search', 'Organic Google search', 1),
-    (10, 'YOUTUBE', 'YouTube', 'YouTube platform', 1);
+    (10, 'YOUTUBE', 'YouTube', 'YouTube platform', 1),
+    (11, 'PROMPTADS', 'PromptAds Platform', 'Internal PromptSales advertising platform', 1);
 
 SET IDENTITY_INSERT [crm].[LeadSourceSystems] OFF;
 
-PRINT '  ✓ Inserted 10 lead source systems';
+PRINT '  ✓ Inserted 11 lead source systems (including PromptAds)';
 
 -- =============================================
 -- LEAD MEDIUMS
@@ -229,30 +230,131 @@ SET IDENTITY_INSERT [crm].[LeadEventTypes] ON;
 
 INSERT INTO [crm].[LeadEventTypes] (leadEventTypeId, eventTypeKey, eventTypeName, categoryKey, description, enabled)
 VALUES
+    -- ==================== BASIC ENGAGEMENT ====================
     (1, 'PAGE_VIEW', 'Page View', 'ENGAGEMENT', 'User viewed a page', 1),
     (2, 'LINK_CLICK', 'Link Click', 'ENGAGEMENT', 'User clicked a link', 1),
     (3, 'BUTTON_CLICK', 'Button Click', 'ENGAGEMENT', 'User clicked a button', 1),
-    (4, 'FORM_VIEW', 'Form View', 'ENGAGEMENT', 'User viewed a form', 1),
-    (5, 'FORM_START', 'Form Start', 'ENGAGEMENT', 'User started filling form', 1),
-    (6, 'FORM_SUBMIT', 'Form Submit', 'CONVERSION', 'User submitted form', 1),
-    (7, 'VIDEO_VIEW', 'Video View', 'ENGAGEMENT', 'User viewed video', 1),
-    (8, 'VIDEO_25', 'Video 25%', 'ENGAGEMENT', 'Watched 25% of video', 1),
-    (9, 'VIDEO_50', 'Video 50%', 'ENGAGEMENT', 'Watched 50% of video', 1),
-    (10, 'VIDEO_75', 'Video 75%', 'ENGAGEMENT', 'Watched 75% of video', 1),
-    (11, 'VIDEO_100', 'Video Complete', 'ENGAGEMENT', 'Watched 100% of video', 1),
-    (12, 'DOWNLOAD', 'File Download', 'CONVERSION', 'Downloaded a file', 1),
-    (13, 'SIGNUP', 'Sign Up', 'CONVERSION', 'Created account', 1),
-    (14, 'ADD_TO_CART', 'Add to Cart', 'CONVERSION', 'Added item to cart', 1),
-    (15, 'CHECKOUT_START', 'Checkout Start', 'CONVERSION', 'Started checkout', 1),
-    (16, 'PURCHASE', 'Purchase', 'CONVERSION', 'Completed purchase', 1),
-    (17, 'EMAIL_OPEN', 'Email Open', 'ENGAGEMENT', 'Opened email', 1),
-    (18, 'EMAIL_CLICK', 'Email Click', 'ENGAGEMENT', 'Clicked link in email', 1),
-    (19, 'CALL', 'Phone Call', 'ENGAGEMENT', 'Made phone call', 1),
-    (20, 'CHAT_START', 'Chat Started', 'ENGAGEMENT', 'Started chat', 1);
+    (4, 'SCROLL_DEPTH_25', 'Scroll 25%', 'ENGAGEMENT', 'Scrolled 25% of page', 1),
+    (5, 'SCROLL_DEPTH_50', 'Scroll 50%', 'ENGAGEMENT', 'Scrolled 50% of page', 1),
+    (6, 'SCROLL_DEPTH_75', 'Scroll 75%', 'ENGAGEMENT', 'Scrolled 75% of page', 1),
+    (7, 'SCROLL_DEPTH_100', 'Scroll 100%', 'ENGAGEMENT', 'Scrolled to bottom of page', 1),
+    (8, 'SESSION_START', 'Session Start', 'ENGAGEMENT', 'User started session', 1),
+    (9, 'SESSION_END', 'Session End', 'ENGAGEMENT', 'User ended session', 1),
+
+    -- ==================== FORM INTERACTIONS ====================
+    (10, 'FORM_VIEW', 'Form View', 'ENGAGEMENT', 'User viewed a form', 1),
+    (11, 'FORM_START', 'Form Start', 'ENGAGEMENT', 'User started filling form', 1),
+    (12, 'FORM_ABANDON', 'Form Abandon', 'ENGAGEMENT', 'User abandoned form', 1),
+    (13, 'FORM_SUBMIT', 'Form Submit', 'ENGAGEMENT', 'User submitted form', 1),
+
+    -- ==================== VIDEO ENGAGEMENT ====================
+    (14, 'VIDEO_VIEW', 'Video View', 'ENGAGEMENT', 'User started video', 1),
+    (15, 'VIDEO_25', 'Video 25%', 'ENGAGEMENT', 'Watched 25% of video', 1),
+    (16, 'VIDEO_50', 'Video 50%', 'ENGAGEMENT', 'Watched 50% of video', 1),
+    (17, 'VIDEO_75', 'Video 75%', 'ENGAGEMENT', 'Watched 75% of video', 1),
+    (18, 'VIDEO_100', 'Video Complete', 'ENGAGEMENT', 'Watched 100% of video', 1),
+    (19, 'VIDEO_PAUSE', 'Video Pause', 'ENGAGEMENT', 'Paused video', 1),
+    (20, 'VIDEO_REPLAY', 'Video Replay', 'ENGAGEMENT', 'Replayed video', 1),
+
+    -- ==================== EMAIL ENGAGEMENT ====================
+    (21, 'EMAIL_OPEN', 'Email Open', 'ENGAGEMENT', 'Opened email', 1),
+    (22, 'EMAIL_CLICK', 'Email Click', 'ENGAGEMENT', 'Clicked link in email', 1),
+    (23, 'EMAIL_REPLY', 'Email Reply', 'ENGAGEMENT', 'Replied to email', 1),
+    (24, 'EMAIL_FORWARD', 'Email Forward', 'ENGAGEMENT', 'Forwarded email', 1),
+    (25, 'EMAIL_UNSUBSCRIBE', 'Email Unsubscribe', 'ENGAGEMENT', 'Unsubscribed from emails', 1),
+
+    -- ==================== CONTENT ENGAGEMENT ====================
+    (26, 'BLOG_VIEW', 'Blog View', 'ENGAGEMENT', 'Viewed blog post', 1),
+    (27, 'ARTICLE_READ', 'Article Read', 'ENGAGEMENT', 'Read full article', 1),
+    (28, 'WHITEPAPER_VIEW', 'Whitepaper View', 'ENGAGEMENT', 'Viewed whitepaper', 1),
+    (29, 'CASE_STUDY_VIEW', 'Case Study View', 'ENGAGEMENT', 'Viewed case study', 1),
+    (30, 'TESTIMONIAL_VIEW', 'Testimonial View', 'ENGAGEMENT', 'Viewed testimonials', 1),
+    (31, 'FAQ_VIEW', 'FAQ View', 'ENGAGEMENT', 'Viewed FAQ page', 1),
+    (32, 'DOCUMENTATION_VIEW', 'Documentation View', 'ENGAGEMENT', 'Viewed documentation', 1),
+
+    -- ==================== PRODUCT RESEARCH ====================
+    (33, 'PRICING_PAGE_VIEW', 'Pricing View', 'ENGAGEMENT', 'Viewed pricing page', 1),
+    (34, 'PRODUCT_PAGE_VIEW', 'Product View', 'ENGAGEMENT', 'Viewed product page', 1),
+    (35, 'FEATURE_COMPARISON', 'Feature Comparison', 'ENGAGEMENT', 'Compared product features', 1),
+    (36, 'PRODUCT_SEARCH', 'Product Search', 'ENGAGEMENT', 'Searched for product', 1),
+    (37, 'CATEGORY_BROWSE', 'Category Browse', 'ENGAGEMENT', 'Browsed product category', 1),
+    (38, 'PRODUCT_ZOOM', 'Product Zoom', 'ENGAGEMENT', 'Zoomed product image', 1),
+    (39, 'PRODUCT_REVIEW_READ', 'Review Read', 'ENGAGEMENT', 'Read product reviews', 1),
+
+    -- ==================== INTERACTIVE TOOLS ====================
+    (40, 'CALCULATOR_USE', 'Calculator Use', 'ENGAGEMENT', 'Used pricing calculator', 1),
+    (41, 'QUIZ_START', 'Quiz Start', 'ENGAGEMENT', 'Started quiz', 1),
+    (42, 'QUIZ_COMPLETE', 'Quiz Complete', 'ENGAGEMENT', 'Completed quiz', 1),
+    (43, 'SURVEY_START', 'Survey Start', 'ENGAGEMENT', 'Started survey', 1),
+    (44, 'SURVEY_COMPLETE', 'Survey Complete', 'ENGAGEMENT', 'Completed survey', 1),
+    (45, 'CONFIGURATOR_USE', 'Configurator Use', 'ENGAGEMENT', 'Used product configurator', 1),
+
+    -- ==================== COMMUNICATION ====================
+    (46, 'CHAT_START', 'Chat Started', 'ENGAGEMENT', 'Started live chat', 1),
+    (47, 'CHAT_MESSAGE_SENT', 'Chat Message', 'ENGAGEMENT', 'Sent chat message', 1),
+    (48, 'CHAT_END', 'Chat Ended', 'ENGAGEMENT', 'Ended chat session', 1),
+    (49, 'CALL', 'Phone Call', 'ENGAGEMENT', 'Made phone call', 1),
+    (50, 'CALLBACK_REQUEST', 'Callback Request', 'ENGAGEMENT', 'Requested callback', 1),
+    (51, 'CONTACT_FORM_VIEW', 'Contact Form View', 'ENGAGEMENT', 'Viewed contact form', 1),
+    (52, 'SUPPORT_TICKET', 'Support Ticket', 'ENGAGEMENT', 'Created support ticket', 1),
+
+    -- ==================== SOCIAL ENGAGEMENT ====================
+    (53, 'SOCIAL_SHARE', 'Social Share', 'ENGAGEMENT', 'Shared on social media', 1),
+    (54, 'SOCIAL_FOLLOW', 'Social Follow', 'ENGAGEMENT', 'Followed on social media', 1),
+    (55, 'SOCIAL_LIKE', 'Social Like', 'ENGAGEMENT', 'Liked social post', 1),
+    (56, 'SOCIAL_COMMENT', 'Social Comment', 'ENGAGEMENT', 'Commented on social post', 1),
+
+    -- ==================== ACCOUNT ACTIONS ====================
+    (57, 'ACCOUNT_CREATE', 'Account Created', 'ENGAGEMENT', 'Created user account', 1),
+    (58, 'LOGIN', 'Login', 'ENGAGEMENT', 'Logged into account', 1),
+    (59, 'PROFILE_UPDATE', 'Profile Update', 'ENGAGEMENT', 'Updated profile', 1),
+    (60, 'PASSWORD_RESET', 'Password Reset', 'ENGAGEMENT', 'Reset password', 1),
+
+    -- ==================== WISHLIST & FAVORITES ====================
+    (61, 'WISHLIST_ADD', 'Wishlist Add', 'ENGAGEMENT', 'Added to wishlist', 1),
+    (62, 'WISHLIST_REMOVE', 'Wishlist Remove', 'ENGAGEMENT', 'Removed from wishlist', 1),
+    (63, 'FAVORITE_ADD', 'Favorite Add', 'ENGAGEMENT', 'Added to favorites', 1),
+    (64, 'BOOKMARK_ADD', 'Bookmark Add', 'ENGAGEMENT', 'Bookmarked page', 1),
+
+    -- ==================== DOWNLOADS & TRIALS ====================
+    (65, 'DOWNLOAD', 'File Download', 'ENGAGEMENT', 'Downloaded a file', 1),
+    (66, 'PDF_DOWNLOAD', 'PDF Download', 'ENGAGEMENT', 'Downloaded PDF', 1),
+    (67, 'EBOOK_DOWNLOAD', 'eBook Download', 'ENGAGEMENT', 'Downloaded eBook', 1),
+    (68, 'TRIAL_START', 'Trial Started', 'ENGAGEMENT', 'Started free trial', 1),
+    (69, 'DEMO_REQUEST', 'Demo Request', 'ENGAGEMENT', 'Requested product demo', 1),
+    (70, 'WEBINAR_REGISTER', 'Webinar Register', 'ENGAGEMENT', 'Registered for webinar', 1),
+    (71, 'WEBINAR_ATTEND', 'Webinar Attend', 'ENGAGEMENT', 'Attended webinar', 1),
+    (72, 'EVENT_REGISTER', 'Event Register', 'ENGAGEMENT', 'Registered for event', 1),
+
+    -- ==================== SHOPPING CART ====================
+    (73, 'CART_VIEW', 'Cart View', 'ENGAGEMENT', 'Viewed shopping cart', 1),
+    (74, 'ADD_TO_CART', 'Add to Cart', 'ENGAGEMENT', 'Added item to cart', 1),
+    (75, 'REMOVE_FROM_CART', 'Remove from Cart', 'ENGAGEMENT', 'Removed item from cart', 1),
+    (76, 'CART_ABANDON', 'Cart Abandon', 'ENGAGEMENT', 'Abandoned shopping cart', 1),
+    (77, 'CHECKOUT_START', 'Checkout Start', 'ENGAGEMENT', 'Started checkout process', 1),
+    (78, 'CHECKOUT_SHIPPING', 'Checkout Shipping', 'ENGAGEMENT', 'Entered shipping info', 1),
+    (79, 'CHECKOUT_PAYMENT', 'Checkout Payment', 'ENGAGEMENT', 'Entered payment info', 1),
+
+    -- ==================== REFERRALS & ADVOCACY ====================
+    (80, 'REFERRAL_SENT', 'Referral Sent', 'ENGAGEMENT', 'Sent referral link', 1),
+    (81, 'REVIEW_WRITE', 'Review Written', 'ENGAGEMENT', 'Wrote product review', 1),
+    (82, 'RATING_SUBMIT', 'Rating Submit', 'ENGAGEMENT', 'Submitted rating', 1),
+
+    -- ==================== ADVANCED ENGAGEMENT ====================
+    (83, 'SEARCH', 'Site Search', 'ENGAGEMENT', 'Performed site search', 1),
+    (84, 'FILTER_APPLY', 'Filter Apply', 'ENGAGEMENT', 'Applied search filter', 1),
+    (85, 'SORT_CHANGE', 'Sort Change', 'ENGAGEMENT', 'Changed sort order', 1),
+    (86, 'LANGUAGE_CHANGE', 'Language Change', 'ENGAGEMENT', 'Changed language', 1),
+    (87, 'CURRENCY_CHANGE', 'Currency Change', 'ENGAGEMENT', 'Changed currency', 1),
+    (88, 'NOTIFICATION_ENABLE', 'Notification Enable', 'ENGAGEMENT', 'Enabled notifications', 1),
+    (89, 'SUBSCRIPTION_SIGNUP', 'Newsletter Signup', 'ENGAGEMENT', 'Signed up for newsletter', 1),
+
+    -- ==================== PURCHASE (THE ONLY CONVERSION CREATOR) ====================
+    (90, 'PURCHASE', 'Purchase', 'CONVERSION', 'Completed purchase - CREATES CLIENT', 1);
 
 SET IDENTITY_INSERT [crm].[LeadEventTypes] OFF;
 
-PRINT '  ✓ Inserted 20 lead event types';
+PRINT '  ✓ Inserted 90 lead event types (89 engagement + 1 conversion)';
 
 -- =============================================
 -- LEAD EVENT SOURCES
