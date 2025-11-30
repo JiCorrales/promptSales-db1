@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mongodb-pdb
+  namespace: mongo
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mongodb

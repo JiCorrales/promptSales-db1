@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: promptcrm
+  namespace: promptcrm
+  labels:
+    app: promptcrm
+spec:
+  type: LoadBalancer
+  selector:
+    app: promptcrm
+  ports:
+    - name: tds
+      port: 1433
+      targetPort: 1433

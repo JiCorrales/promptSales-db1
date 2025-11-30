@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promptcrm
+  labels:
+    app: promptsales
+    component: crm
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promptads
+  labels:
+    app: promptsales
+    component: ads
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mongo
+  labels:
+    app: promptsales
+    component: content
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis
+  labels:
+    app: promptsales
+    component: cache
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promptcontent-dev
+  labels:
+    app: promptsales
+    component: content
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promptsales
+  labels:
+    app: promptsales
+    component: central

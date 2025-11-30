@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: promptcrm
+  namespace: promptcrm
+  labels:
+    app: promptcrm
+    tier: database
+spec:
+  serviceName: "promptcrm"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: promptcrm
+  template:
+    metadata:
+      labels:
+        app: promptcrm
+        tier: database
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - promptcrm
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        fsGroup: 10001  # Permisos de /var/opt/mssql
+      containers:
+        - name: promptcrm
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 1433
+              name: tds
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: promptcrm-secret
+                  key: SA_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/opt/mssql
+          resources:
+            requests:
+              cpu: "3"
+              memory: "5Gi"
+            limits:
+              cpu: "5"
+              memory: "7Gi"
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 60
+            periodSeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: promptcrm-data

@@ -23,3 +23,5 @@ Thumbs.db
 # Test outputs
 test-output/
 *.out
+DEPLOYMENT.md
+.gitignore

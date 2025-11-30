@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mongodb-networkpolicy
+  namespace: mongo
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            app: promptsales
+      ports:
+        - protocol: TCP
+          port: 27017
+  egress:
+    # Permitir DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Permitir comunicación con PostgreSQL (PromptSales)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: central
+      ports:
+        - protocol: TCP
+          port: 5432
