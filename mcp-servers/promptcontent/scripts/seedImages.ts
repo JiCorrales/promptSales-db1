@@ -114,7 +114,7 @@ async function seed() {
   await hashtags.deleteMany({})
 
   // Índices para búsqueda por texto y unicidad de hashtags
-  console.log("Creando índices...")
+  console.log("Creando índices de mongo...")
   try {
     await images.createIndex({ title: "text", alt: "text", tags: "text" })
   } catch {}
@@ -141,7 +141,6 @@ if (phrases.length > 0) {
       title: p.slice(0, 120),
       alt: desc.slice(0, 200),
       tags,
-      score: randomInt(70, 99),
       createdAt: new Date()
     })
   }
@@ -160,7 +159,6 @@ for (let i = 0; i < remaining; i++) {
     title: `${theme} ${randomPick(["view", "perspective", "scene", "panorama", "detail", "composition"])}`,
     alt: desc.slice(0, 200),
     tags,
-    score: randomInt(70, 99),
     createdAt: new Date()
   })
 }

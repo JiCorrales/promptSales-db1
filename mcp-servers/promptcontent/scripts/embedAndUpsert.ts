@@ -1,66 +1,60 @@
 import { MongoClient } from "mongodb"
-import { Pinecone } from "@pinecone-database/pinecone"
-import { OpenAI } from "openai"
+import { getPinecone, ensureIndex } from "../src/pinecone-util"
+import { generateEmbedding as sharedGenerateEmbedding } from "../src/embeddings"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017"
-const MONGO_DB = process.env.MONGODB_DB || "promptContent"
-const PINECONE_API_KEY = process.env.PINECONE_API_KEY!
-const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX || "promptcontent"
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY!
-const EMBED_MAX_AGE_DAYS = Number(process.env.EMBED_MAX_AGE_DAYS || 30)
-const EMBED_LIMIT = Number(process.env.EMBED_LIMIT || 100)
+const INIT_ONLY = process.argv.includes("--init-only")
+const MONGO_URI = process.env.MONGODB_URI
+const MONGO_DB = process.env.MONGODB_DB
+const PINECONE_API_KEY = process.env.PINECONE_API_KEY
+const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const EMBED_MAX_AGE_DAYS_RAW = process.env.EMBED_MAX_AGE_DAYS
+const EMBED_LIMIT_RAW = process.env.EMBED_LIMIT
+const EMBED_DIM_RAW = process.env.EMBED_DIM
+const PINECONE_CLOUD = process.env.PINECONE_CLOUD
+const PINECONE_REGION = process.env.PINECONE_REGION
+const PINECONE_NAMESPACE = process.env.PINECONE_NAMESPACE || "default"
 
-if (!PINECONE_API_KEY || !OPENAI_API_KEY) {
-  console.error("Faltan PINECONE_API_KEY o OPENAI_API_KEY en .env")
-  process.exit(1)
-}
-
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
-const pc = new Pinecone({ apiKey: PINECONE_API_KEY })
-
-async function ensureIndex() {
-  const indexes = await pc.listIndexes()
-  const exists = indexes.indexes?.some(idx => idx.name === PINECONE_INDEX_NAME)
-  if (!exists) {
-    console.log("Creando índice Pinecone...")
-    await pc.createIndex({
-      name: PINECONE_INDEX_NAME,
-      dimension: 1536,
-      metric: "cosine",
-      spec: { serverless: { cloud: "aws", region: "us-east-1" } }
-    })
-    console.log("Índice creado.")
+if (INIT_ONLY) {
+  if (!PINECONE_API_KEY || !PINECONE_INDEX_NAME || !EMBED_DIM_RAW || !PINECONE_CLOUD || !PINECONE_REGION) {
+    console.error("ENV_MISSING_INIT")
+    process.exit(1)
+  }
+} else {
+  if (!MONGO_URI || !MONGO_DB || !PINECONE_API_KEY || !PINECONE_INDEX_NAME || !OPENAI_API_KEY || !EMBED_MAX_AGE_DAYS_RAW || !EMBED_LIMIT_RAW || !EMBED_DIM_RAW || !PINECONE_CLOUD || !PINECONE_REGION) {
+    console.error("ENV_MISSING")
+    process.exit(1)
   }
 }
-
-function pseudoEmbedding(text: string, dim = 1536): number[] {
-  let h = 2166136261
-  for (let i = 0; i < text.length; i++) h = (h ^ text.charCodeAt(i)) * 16777619
-  const out = new Array(dim)
-  let x = h >>> 0
-  for (let i = 0; i < dim; i++) {
-    x ^= x << 13
-    x ^= x >>> 17
-    x ^= x << 5
-    out[i] = (x % 1000) / 1000
-  }
-  return out
+const EMBED_DIM = Number(EMBED_DIM_RAW)
+let EMBED_MAX_AGE_DAYS = 0
+let EMBED_LIMIT = 0
+if (!INIT_ONLY) {
+  EMBED_MAX_AGE_DAYS = Number(EMBED_MAX_AGE_DAYS_RAW)
+  EMBED_LIMIT = Number(EMBED_LIMIT_RAW)
 }
+
+const pc = getPinecone()
+
+async function initIndex() {
+  await ensureIndex(PINECONE_INDEX_NAME!, EMBED_DIM, PINECONE_CLOUD!, PINECONE_REGION!)
+}
+
 
 async function generateEmbedding(text: string): Promise<number[]> {
-  try {
-    const resp = await openai.embeddings.create({ model: "text-embedding-3-small", input: text })
-    return resp.data[0].embedding
-  } catch {
-    return pseudoEmbedding(text)
-  }
+  console.log("[embedAndUpsert] embed", { inputLen: text?.length })
+  return await sharedGenerateEmbedding(text)
 }
 
 async function main() {
-  await ensureIndex()
+  await initIndex()
+  if (INIT_ONLY) {
+    console.log("✅ Índice verificado/creado")
+    return
+  }
   const index = pc.index(PINECONE_INDEX_NAME)
 
   const mongo = new MongoClient(MONGO_URI)
@@ -79,19 +73,20 @@ async function main() {
     const vectors: { id: string; values: number[]; metadata: any }[] = []
     for (const doc of batch) {
       try {
-        const text = `${doc.alt || ''} ${doc.title || ''} tags: ${(doc.tags || []).join(', ')}`.trim()
+        const text = String(doc.alt || '')
         const values = await generateEmbedding(text)
-        vectors.push({ id: doc._id.toString(), values, metadata: { url: doc.url, title: doc.title, tags: doc.tags, alt: doc.alt } })
+        vectors.push({ id: doc._id.toString(), values })
       } catch {}
     }
     if (vectors.length) {
-      await index.upsert(vectors)
+      console.log("[embedAndUpsert] upsert", { count: vectors.length, namespace: PINECONE_NAMESPACE })
+      await index.upsert(vectors, { namespace: PINECONE_NAMESPACE })
     }
     const ids = vectors.map(v => (v.id as any))
     if (ids.length) {
       await images.updateMany({ _id: { $in: ids as any } }, { $set: { lastEmbeddedAt: new Date() } })
     }
-    console.log(`Upsertados ${i + batch.length}`)
+    console.log(`Upsertados ${i + batch.length} (ns=${PINECONE_NAMESPACE})`)
   }
 
   await mongo.close()

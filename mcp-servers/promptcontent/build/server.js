@@ -17,211 +17,30 @@ const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const zod_1 = require("zod");
 const mongodb_1 = require("mongodb");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
-const pinecone_1 = require("@pinecone-database/pinecone");
+const pinecone_1 = require("./pinecone");
 const spotify_1 = require("./spotify");
 const openai_1 = __importDefault(require("openai"));
-/**
- * Cliente global de MongoDB reutilizable.
- * @type {MongoClient | null}
- */
 let mongoClient = null;
-/**
- * Instancia global de base de datos MongoDB reutilizable.
- * @type {Db | null}
- */
 let mongoDb = null;
-/**
- * Cliente global de Pinecone reutilizable.
- * @type {Pinecone | null}
- */
-let pineconeClient = null;
-/**
- * Obtiene (y cachea) la instancia de base de datos MongoDB.
- *
- * Usa las variables de entorno:
- * - `MONGODB_URI` (opcional, por defecto `mongodb://127.0.0.1:27017`)
- * - `MONGODB_DB` (opcional, por defecto `promptcontent`)
- *
- * @async
- * @returns {Promise<Db>} Instancia de la base de datos de MongoDB.
- */
 async function getDb() {
     if (mongoDb)
         return mongoDb;
-    const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
+    const uri = process.env.MONGODB_URI;
+    const dbName = process.env.MONGODB_DB;
+    if (!uri || !dbName)
+        throw new Error("MONGODB_ENV_MISSING");
     mongoClient = await new mongodb_1.MongoClient(uri).connect();
-    mongoDb = mongoClient.db(process.env.MONGODB_DB || "promptcontent");
+    mongoDb = mongoClient.db(dbName);
+    try {
+        const imagesCol = mongoDb.collection("images");
+        await imagesCol.createIndex({ alt: "text" }, { name: "images_text_alt" });
+    }
+    catch { }
     return mongoDb;
 }
-/**
- * Obtiene (y cachea) el cliente de Pinecone.
- *
- * Requiere la variable de entorno:
- * - `PINECONE_API_KEY`
- *
- * @throws {Error} Si `PINECONE_API_KEY` no está configurada.
- * @returns {Pinecone} Cliente de Pinecone inicializado.
- */
-function getPinecone() {
-    if (!pineconeClient) {
-        const key = process.env.PINECONE_API_KEY;
-        if (!key)
-            throw new Error("PINECONE_API_KEY no configurada");
-        pineconeClient = new pinecone_1.Pinecone({ apiKey: key });
-    }
-    return pineconeClient;
-}
-/**
- * Normaliza una cadena para convertirla en hashtag.
- *
- * - Elimina espacios al inicio/fin.
- * - Reemplaza espacios internos por guiones bajos.
- * - Elimina caracteres no alfanuméricos (excepto `_`).
- * - Convierte a minúsculas.
- * - Asegura que comience con `#`.
- *
- * @param {string} t Texto a normalizar.
- * @returns {string} Hashtag normalizado (ej: `#contenido_marketing`).
- */
 function normalizeHashtag(t) {
     const cleaned = t.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
     return cleaned.startsWith("#") ? cleaned : `#${cleaned.toLowerCase()}`;
-}
-function toTagToken(t) {
-    return t.replace(/^#/, "").toLowerCase();
-}
-function stripAccents(s) {
-    return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-function toEnglishToken(t) {
-    const lower = t.replace(/^#/, "").trim().toLowerCase().replace(/_/g, " ");
-    const base = stripAccents(lower);
-    const dict = {
-        "contenido": "content",
-        "marketing": "marketing",
-        "campana": "campaign",
-        "campañas": "campaigns",
-        "campanas": "campaigns",
-        "producto": "product",
-        "productos": "products",
-        "servicio": "service",
-        "servicios": "services",
-        "marca": "brand",
-        "marcas": "brands",
-        "ventas": "sales",
-        "promocion": "promotion",
-        "promoción": "promotion",
-        "promociones": "promotions",
-        "publicidad": "advertising",
-        "oferta": "offer",
-        "ofertas": "offers",
-        "cliente": "customer",
-        "clientes": "customers",
-        "usuario": "user",
-        "usuarios": "users",
-        "precio": "price",
-        "negocio": "business",
-        "tecnologia": "technology",
-        "tecnología": "technology",
-        "moda": "fashion",
-        "viajes": "travel",
-        "estilo": "style",
-        "vida": "life",
-        "familia": "family",
-        "profesional": "professional",
-        "profesionales": "professionals",
-        "jóvenes": "young",
-        "jovenes": "young",
-        "adultos": "adults",
-        "conciencia": "awareness",
-        "consideracion": "consideration",
-        "consideración": "consideration",
-        "conversion": "conversion",
-        "estrategia": "strategy",
-        "objetivo": "goal",
-        "objetivos": "goals",
-        "calendario": "schedule",
-        "plataforma": "platform",
-        "imagen": "image",
-        "imagenes": "images",
-        "imágenes": "images",
-        "video": "video",
-        "carrusel": "carousel",
-        "historia": "story",
-        "reel": "reel",
-        "alcance": "reach",
-        "engagement": "engagement",
-        "audiencia": "audience",
-        "creatividad": "creativity",
-        "calidad": "quality",
-        "excelencia": "excellence",
-        "comparativa": "comparison",
-        "beneficios": "benefits",
-        "beneficio": "benefit",
-        "comunidad": "community",
-        "urgencia": "urgency",
-        "moderno": "modern",
-        "aspiracional": "aspirational",
-        "cálido": "warm",
-        "calido": "warm",
-        "confiable": "reliable",
-        "emocional": "emotional",
-        "premium": "premium",
-        "estilo de vida": "lifestyle"
-    };
-    const direct = dict[base];
-    if (direct)
-        return direct;
-    let guess = base;
-    if (guess.endsWith("ción"))
-        guess = guess.slice(0, -4) + "tion";
-    if (guess.endsWith("cion"))
-        guess = guess.slice(0, -4) + "tion";
-    if (guess.endsWith("ciones"))
-        guess = guess.slice(0, -6) + "tions";
-    if (guess.endsWith("ización"))
-        guess = guess.slice(0, -8) + "ization";
-    if (guess.endsWith("izacion"))
-        guess = guess.slice(0, -8) + "ization";
-    if (guess.endsWith("idad"))
-        guess = guess.slice(0, -4) + "ity";
-    if (guess.endsWith("ico"))
-        guess = guess.slice(0, -3) + "ic";
-    return guess;
-}
-function toEnglishHashtag(t) {
-    const token = toEnglishToken(t);
-    const normalized = token.replace(/\s+/g, "_");
-    return normalizeHashtag(normalized);
-}
-/**
- * Elimina espacios y backticks al inicio y al final de una URL.
- *
- * @param {string} u URL potencialmente "sucia".
- * @returns {string} URL saneada.
- */
-function sanitizeUrl(u) {
-    return (u || "").replace(/^[\s`]+|[\s`]+$/g, "");
-}
-/**
- * The function `themedImageUrl` generates a themed image URL using input tokens and an index number.
- * @param {string[]} tokens - An array of strings containing keywords or tags for the image search.
- * @param {number} i - The `i` parameter in the `themedImageUrl` function is used as a unique
- * identifier to generate a random query parameter in the URL. This helps in ensuring that each
- * generated URL is unique, even if the same set of tokens is used.
- * @returns The function `themedImageUrl` returns a URL string that includes the tokens passed as
- * arguments, encoded and formatted as query parameters. The URL is constructed using the
- * `loremflickr.com` API to generate a themed image with the specified tokens and a random query
- * parameter. If the query string is empty, an empty string is returned.
- */
-function themedImageUrl(tokens, i) {
-    const toks = tokens.filter(Boolean).map(t => toEnglishToken(toTagToken(t)));
-    const pool = Array.from(new Set(toks));
-    const priority = new Set(["sunrise", "sunset", "sun"]);
-    const sorted = [...pool].sort((a, b) => (priority.has(b) ? 1 : 0) - (priority.has(a) ? 1 : 0));
-    const pick = sorted.slice(0, Math.min(3, sorted.length));
-    const q = pick.map(t => encodeURIComponent(t)).join(",");
-    return q ? `https://loremflickr.com/800/600/${q}?random=${i}` : "";
 }
 /**
  * The function `extractHashtags` takes a string of text, extracts words excluding common stop words,
@@ -238,19 +57,9 @@ function themedImageUrl(tokens, i) {
 function extractHashtags(text) {
     const lower = text.toLowerCase();
     const tokens = lower.split(/[^a-z0-9áéíóúñ]+/i).filter(Boolean);
-    const stop = new Set(["de", "la", "el", "en", "y", "para", "por", "con", "del", "las", "los", "un", "una", "al", "que", "se", "the", "a", "an", "and", "or", "to", "for", "with", "of", "in", "on", "by", "at", "is", "are"]);
-    const words = tokens.filter(t => !stop.has(t) && t.length > 2);
+    const words = tokens.filter(t => t.length > 2);
     const unique = Array.from(new Set(words));
     return unique.slice(0, 15).map(w => normalizeHashtag(w));
-}
-async function translateToEnglish(text) {
-    // Sin OpenAI: devolvemos texto normalizado sin acentos
-    return stripAccents(text);
-}
-function isSpanish(text) {
-    const accents = /[áéíóúñ]/i.test(text);
-    const sw = /(\bde\b|\bla\b|\bel\b|\ben\b|\by\b|\bpara\b|\bpor\b|\bcon\b|\bdel\b|\blas\b|\blos\b|\bun\b|\buna\b|\bal\b|\bque\b|\bse\b)/i.test(text);
-    return accents || sw;
 }
 function parseSegmentsPayload(raw) {
     const fenced = (raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
@@ -270,20 +79,10 @@ function parseSegmentsPayload(raw) {
     }
     return null;
 }
-function fallbackSegments(descripcion, auds) {
-    const base = (descripcion || "").trim().slice(0, 140);
-    const mk = (t) => ({ tipo: t, texto: `${base}` });
-    return [
-        {
-            nombre: "Awareness",
-            mensajes: [mk("awareness"), mk("consideration"), mk("conversion")]
-        }
-    ];
-}
 async function generateMessagesWithAI(descripcion, auds) {
     const key = process.env.OPENAI_API_KEY;
     if (!key)
-        return fallbackSegments(descripcion, auds);
+        throw new Error("OPENAI_API_KEY_MISSING");
     const client = new openai_1.default({ apiKey: key });
     const system = `
 Eres un generador de campañas de marketing.
@@ -342,54 +141,7 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
             }
         }
     }
-    return fallbackSegments(descripcion, auds);
-}
-/**
- * Realiza una búsqueda semántica de imágenes usando Pinecone.
- *
- * Flujo:
- * 1. Intenta crear un embedding con OpenAI (modelo `text-embedding-3-small`).
- * 2. Si falla, usa un "pseudo-embedding" determinista como fallback.
- * 3. Consulta el índice Pinecone definido en `PINECONE_INDEX` (o `promptcontent` por defecto).
- * 4. Retorna hasta 5 coincidencias con metadatos.
- * 5. Si todo falla (error general), retorna imágenes mock.
- *
- * @async
- * @param {string} query Texto de búsqueda semántica.
- * @returns {Promise<ImageResult[]>} Lista de imágenes similares a la consulta.
- */
-function pseudoEmbedding(query, dim = 1536) {
-    // Genera un embedding determinista sin OpenAI
-    const v = new Float32Array(dim);
-    const seed = query || "empty";
-    for (let i = 0; i < seed.length; i++) {
-        const code = seed.charCodeAt(i);
-        const idx = i % dim;
-        v[idx] = (v[idx] + (code % 31)) % 1;
-    }
-    return Array.from(v);
-}
-async function semanticSearch(query, tagsFilter) {
-    try {
-        const pc = getPinecone();
-        const index = pc.index(process.env.PINECONE_INDEX || "promptcontent");
-        const dim = Number(process.env.EMBED_DIM || 1536);
-        const vector = pseudoEmbedding(query, dim);
-        const q = { vector, topK: 5, includeMetadata: true };
-        if (tagsFilter && tagsFilter.length > 0) {
-            q.filter = { tags: { $in: tagsFilter } };
-        }
-        const res = await index.query(q);
-        return (res.matches || []).map(m => ({
-            url: m.metadata.url,
-            alt: m.metadata.alt,
-            tags: m.metadata.tags || [],
-            score: typeof m.score === "number" ? m.score : undefined
-        }));
-    }
-    catch {
-        return [];
-    }
+    return [];
 }
 /**
  * Crea y configura una instancia de `McpServer` con todas las tools
@@ -413,6 +165,7 @@ async function semanticSearch(query, tagsFilter) {
  *
  * @returns {McpServer} Servidor MCP listo para conectarse a un transporte.
  */
+//TODO: mejorar tipado de respuestas estructuradas
 function createPromptContentServer() {
     const server = new mcp_js_1.McpServer({
         name: "mcp-server-promptcontent",
@@ -422,15 +175,14 @@ function createPromptContentServer() {
     // TOOL 1: getContent
     server.registerTool("getContent", {
         title: "Buscar imágenes por descripción",
-        description: "recibe una descripción textual y retorna imágenes que coinciden y sus hashtags",
+        description: "Busca imágenes relevantes (ES/EN) usando embeddings en Pinecone a partir de una descripción y devuelve URLs con metadatos más hashtags sugeridos",
         inputSchema: {
             descripcion: zod_1.z.string().describe("Descripción textual para buscar imágenes")
         },
         outputSchema: {
             images: zod_1.z.array(zod_1.z.object({
                 url: zod_1.z.string(),
-                alt: zod_1.z.string().optional(),
-                score: zod_1.z.number().optional(),
+                description: zod_1.z.string().optional(),
                 tags: zod_1.z.array(zod_1.z.string()).optional()
             })),
             hashtags: zod_1.z.array(zod_1.z.string())
@@ -453,81 +205,36 @@ function createPromptContentServer() {
      *          Respuesta MCP con contenido serializado y estructurado.
      */
     async ({ descripcion }) => {
+        console.log("[getContent] start", { descripcion });
         let images = [];
-        const originalText = descripcion;
-        let searchText = originalText;
-        let didTranslate = false;
-        if (isSpanish(originalText)) {
-            searchText = await translateToEnglish(originalText);
-            didTranslate = true;
-            try {
-                const db = await getDb();
-                await db.collection("AIRequests").insertOne({
-                    aiRequestId: `translation_${Date.now()}`,
-                    createdAt: new Date(),
-                    completedAt: new Date(),
-                    status: "completed",
-                    type: "translation",
-                    prompt: originalText,
-                    output: searchText
-                });
-            }
-            catch { }
-        }
-        const explicitHashtags = (originalText.match(/#[\p{L}\p{N}_]+/gu) || []).map(h => h.toLowerCase());
-        const explicitTokens = explicitHashtags.map(toTagToken);
-        const explicitTokensEn = explicitTokens.map(toEnglishToken);
         try {
-            const db = await getDb();
-            const imagesCol = db.collection("images");
-            // Query: búsqueda por texto y filtro opcional por hashtags
-            const results = await imagesCol
-                .find({ $and: [{ $text: { $search: searchText } }, ...(explicitTokensEn.length > 0 ? [{ tags: { $in: explicitTokensEn } }] : [])] }, { projection: { score: { $meta: "textScore" } } })
-                .sort({ score: { $meta: "textScore" } })
-                .limit(4)
-                .toArray();
-            images = results.map((doc) => ({
-                url: doc.url,
-                alt: doc.alt,
-                score: doc.score,
-                tags: doc.tags
-            }));
-            if (images.length === 0) {
-                const enhancedQuery = searchText + (explicitTokensEn.length > 0 ? " hashtags: " + explicitTokensEn.join(", ") : "");
-                images = await semanticSearch(enhancedQuery, explicitTokensEn);
+            // Buscar imágenes por descripción con embeddings
+            const idResults = await (0, pinecone_1.semanticSearch)(descripcion);
+            console.log("[getContent] pinecone.matches", { count: Array.isArray(idResults) ? idResults.length : 0, sample: idResults?.[0] });
+            // Usar los IDs encontrados para buscar en MongoDB
+            if (Array.isArray(idResults) && idResults.length > 0) {
+                const db = await getDb();
+                const imagesCol = db.collection("images");
+                const ids = idResults.map((r) => r.id).filter(Boolean);
+                console.log("[getContent] mongo.lookup.ids", ids);
+                const objIds = ids.map((s) => new mongodb_1.ObjectId(s));
+                const docs = await imagesCol.find({ _id: { $in: objIds } }).limit(5).toArray();
+                console.log("[getContent] mongo.docs", { count: docs.length });
+                images = docs.map((doc) => ({ url: doc.url, description: doc.alt, tags: doc.tags }));
             }
-            // No mock fallback: keep empty if semantic search returns none
-            // Filtro post-búsqueda para priorizar coincidencias con hashtags
-            images = images.filter(img => {
-                if (explicitTokensEn.length === 0)
-                    return true;
-                const imgTokens = (img.tags || []).map(t => t.toLowerCase());
-                return explicitTokensEn.some(tok => imgTokens.includes(tok));
-            });
         }
-        catch {
+        catch (e) {
+            console.error("[getContent] error.semanticSearch", e);
             images = [];
         }
-        // Reescribir URL para imágenes temáticas cuando hay hashtags explícitos
-        if (explicitTokensEn.length > 0) {
-            images = images.map((img, idx) => {
-                const themed = themedImageUrl(explicitTokensEn, idx);
-                return { ...img, url: themed || img.url };
-            });
-        }
-        // Sanear URLs por si vienen con espacios/backticks
-        images = images.map(i => ({ ...i, url: sanitizeUrl(i.url) }));
-        const hashtagsBase = extractHashtags(searchText).map(toEnglishHashtag);
-        const hashtagsExplicit = explicitHashtags.map(toEnglishHashtag);
-        const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(toEnglishHashtag);
-        let hashtags = Array.from(new Set([...hashtagsBase, ...hashtagsExplicit, ...hashtagsFromImages])).slice(0, 15);
-        if (hashtags.some(h => /[áéíóúñ]/i.test(h))) {
-            hashtags = hashtags.map(toEnglishHashtag);
-        }
+        const hashtagsFromImages = images.flatMap(i => (i.tags || [])).map(normalizeHashtag);
+        let hashtags = Array.from(new Set(hashtagsFromImages)).slice(0, 15);
         if (hashtags.length === 0) {
-            hashtags = ["#marketing", "#content", "#campaign"];
+            console.log("[getContent] hashtags.fallback", { reason: "no-image-tags" });
+            hashtags = extractHashtags(descripcion);
         }
         const output = { images, hashtags };
+        console.log("[getContent] end", { imagesCount: images.length, hashtagsCount: hashtags.length });
         return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
     });
     // TOOL 2: searchMusic

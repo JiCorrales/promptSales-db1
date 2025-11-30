@@ -11,7 +11,8 @@
         "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:dev",
         "server:stdio": "node build/server.js",
         "db:seed": "tsx scripts/seedImages.ts",
-        "db:embed": "tsx scripts/embedAndUpsert.ts"
+        "db:embed": "tsx scripts/embedAndUpsert.ts",
+        "pinecone:init": "tsx scripts/embedAndUpsert.ts --init-only"
     },
     "keywords": [],
     "devDependencies": {
