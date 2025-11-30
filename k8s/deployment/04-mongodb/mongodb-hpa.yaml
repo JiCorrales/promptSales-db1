@@ -12,7 +12,7 @@ spec:
     kind: StatefulSet
     name: mongodb
   minReplicas: 1
-  maxReplicas: 6
+  maxReplicas: 1  # Limitado a 1 hasta implementar MongoDB ReplicaSet
   metrics:
     - type: Resource
       resource:

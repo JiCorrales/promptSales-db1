@@ -12,7 +12,7 @@ spec:
     kind: StatefulSet
     name: promptcrm
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 1  # Limitado a 1 hasta implementar AlwaysOn AG o log shipping
   metrics:
     - type: Resource
       resource:

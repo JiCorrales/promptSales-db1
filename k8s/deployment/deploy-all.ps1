@@ -122,7 +122,7 @@ if (-not $SkipMinikubeCheck) {
             --kubernetes-version=v1.29.6 `
             --container-runtime=containerd `
             --cpus=6 `
-            --memory=10240 `
+            --memory=12240 `
             --disk-size=50g
 
         if ($LASTEXITCODE -ne 0) {

@@ -12,7 +12,7 @@ spec:
     kind: StatefulSet
     name: redis
   minReplicas: 1
-  maxReplicas: 6
+  maxReplicas: 1  # Limitado a 1 hasta implementar Redis Sentinel/Cluster
   metrics:
     - type: Resource
       resource:

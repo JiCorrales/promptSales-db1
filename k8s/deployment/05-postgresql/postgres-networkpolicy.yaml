@@ -15,10 +15,19 @@ spec:
     - Egress
   ingress:
     - from:
-      # Permitir desde todos los namespaces de PromptSales
+      # Permitir desde namespaces autorizados del ecosistema
       - namespaceSelector:
           matchLabels:
-            app: promptsales
+            component: crm
+      - namespaceSelector:
+          matchLabels:
+            component: ads
+      - namespaceSelector:
+          matchLabels:
+            component: content   # PromptContent/MCP
+      - namespaceSelector:
+          matchLabels:
+            component: central   # mismo namespace/servicios internos
       ports:
         - protocol: TCP
           port: 5432

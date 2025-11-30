@@ -1,6 +1,4 @@
 # Kubernetes secrets
-*-secret.yaml
-secrets*.yaml
 
 # Temporary files
 *.tmp

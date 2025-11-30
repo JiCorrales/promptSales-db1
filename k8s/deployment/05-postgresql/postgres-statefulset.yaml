@@ -39,6 +39,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: postgres
+            - secretRef:
+                name: postgres-secret
           args:
             - "-c"
             - "listen_addresses=*"
