@@ -1,15 +1,7 @@
 USE PromptCRM;
 GO
 
-PRINT '========================================';
-PRINT 'TABLE PARTITIONING SETUP';
-PRINT '========================================';
-PRINT '';
-
--- =============================================
--- STEP 1: CREATE PARTITION FUNCTIONS
--- =============================================
-PRINT 'Step 1: Creating partition functions...';
+PRINT 'Creating partition functions...';
 PRINT '';
 
 -- Partition function for LeadEvents (by occurredAt)
@@ -29,11 +21,11 @@ BEGIN
         '2028-01-01', '2028-02-01', '2028-03-01', '2028-04-01', '2028-05-01', '2028-06-01',
         '2028-07-01', '2028-08-01', '2028-09-01', '2028-10-01', '2028-11-01', '2028-12-01'
     );
-    PRINT '  ✓ Partition function PF_LeadEvents_ByMonth created (60 partitions)';
+    PRINT 'Partition function PF_LeadEvents_ByMonth created (60 partitions)';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition function PF_LeadEvents_ByMonth already exists';
+    PRINT 'Partition function PF_LeadEvents_ByMonth already exists';
 END
 GO
 
@@ -53,11 +45,11 @@ BEGIN
         '2028-01-01', '2028-02-01', '2028-03-01', '2028-04-01', '2028-05-01', '2028-06-01',
         '2028-07-01', '2028-08-01', '2028-09-01', '2028-10-01', '2028-11-01', '2028-12-01'
     );
-    PRINT '  ✓ Partition function PF_ApiLog_ByMonth created (60 partitions)';
+    PRINT 'Partition function PF_ApiLog_ByMonth created (60 partitions)';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition function PF_ApiLog_ByMonth already exists';
+    PRINT 'Partition function PF_ApiLog_ByMonth already exists';
 END
 GO
 
@@ -73,11 +65,11 @@ BEGIN
         '2026-01-01', '2026-02-01', '2026-03-01', '2026-04-01', '2026-05-01', '2026-06-01',
         '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01'
     );
-    PRINT '  ✓ Partition function PF_Logs_ByMonth created (36 partitions)';
+    PRINT 'Partition function PF_Logs_ByMonth created (36 partitions)';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition function PF_Logs_ByMonth already exists';
+    PRINT 'Partition function PF_Logs_ByMonth already exists';
 END
 GO
 
@@ -97,20 +89,17 @@ BEGIN
         '2028-01-01', '2028-02-01', '2028-03-01', '2028-04-01', '2028-05-01', '2028-06-01',
         '2028-07-01', '2028-08-01', '2028-09-01', '2028-10-01', '2028-11-01', '2028-12-01'
     );
-    PRINT '  ✓ Partition function PF_Transactions_ByMonth created (60 partitions)';
+    PRINT 'Partition function PF_Transactions_ByMonth created (60 partitions)';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition function PF_Transactions_ByMonth already exists';
+    PRINT 'Partition function PF_Transactions_ByMonth already exists';
 END
 GO
 
 PRINT '';
 
--- =============================================
--- STEP 2: CREATE PARTITION SCHEMES
--- =============================================
-PRINT 'Step 2: Creating partition schemes...';
+PRINT 'Creating partition schemes...';
 PRINT '';
 
 -- Partition scheme for LeadEvents
@@ -119,11 +108,11 @@ BEGIN
     CREATE PARTITION SCHEME PS_LeadEvents_ByMonth
     AS PARTITION PF_LeadEvents_ByMonth
     ALL TO ([PRIMARY]);
-    PRINT '  ✓ Partition scheme PS_LeadEvents_ByMonth created';
+    PRINT 'Partition scheme PS_LeadEvents_ByMonth created';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition scheme PS_LeadEvents_ByMonth already exists';
+    PRINT 'Partition scheme PS_LeadEvents_ByMonth already exists';
 END
 GO
 
@@ -133,11 +122,11 @@ BEGIN
     CREATE PARTITION SCHEME PS_ApiLog_ByMonth
     AS PARTITION PF_ApiLog_ByMonth
     ALL TO ([PRIMARY]);
-    PRINT '  ✓ Partition scheme PS_ApiLog_ByMonth created';
+    PRINT 'Partition scheme PS_ApiLog_ByMonth created';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition scheme PS_ApiLog_ByMonth already exists';
+    PRINT 'Partition scheme PS_ApiLog_ByMonth already exists';
 END
 GO
 
@@ -147,11 +136,11 @@ BEGIN
     CREATE PARTITION SCHEME PS_Logs_ByMonth
     AS PARTITION PF_Logs_ByMonth
     ALL TO ([PRIMARY]);
-    PRINT '  ✓ Partition scheme PS_Logs_ByMonth created';
+    PRINT 'Partition scheme PS_Logs_ByMonth created';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition scheme PS_Logs_ByMonth already exists';
+    PRINT 'Partition scheme PS_Logs_ByMonth already exists';
 END
 GO
 
@@ -161,12 +150,10 @@ BEGIN
     CREATE PARTITION SCHEME PS_Transactions_ByMonth
     AS PARTITION PF_Transactions_ByMonth
     ALL TO ([PRIMARY]);
-    PRINT '  ✓ Partition scheme PS_Transactions_ByMonth created';
+    PRINT 'Partition scheme PS_Transactions_ByMonth created';
 END
 ELSE
 BEGIN
-    PRINT '  ✓ Partition scheme PS_Transactions_ByMonth already exists';
+    PRINT 'Partition scheme PS_Transactions_ByMonth already exists';
 END
 GO
-
-PRINT '';

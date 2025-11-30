@@ -1,95 +1,91 @@
 -- =============================================
--- STEP 5: Generar Clients desde Leads Convertidos v4.0 - OPTIMIZED
--- =============================================
--- Genera clientes desde leads que tienen conversiones:
---   - firstName NOT NULL (generar si Lead no lo tiene)
---   - lastName NOT NULL (generar si Lead no lo tiene)
---   - email VARCHAR (texto plano heredado del Lead)
---   - phoneNumber VARCHAR (texto plano heredado del Lead)
---   - nationalId VARBINARY CIFRADO usando ENCRYPTBYKEY en batch (OPTIMIZADO)
---   - firstPurchaseAt NOT NULL (fecha primera conversión)
---   - lastPurchaseAt NOT NULL (fecha última conversión)
---   - clientStatusId NOT NULL (ACTIVE por defecto)
---   - subscriberId NOT NULL (heredado del Lead)
---   - leadId NOT NULL y UNIQUE
---   - currencyId NOT NULL (USD por defecto)
---   - lifetimeValue calculado desde conversiones
--- OPTIMIZACIÓN v4.0:
---   • Cifrado vectorizado (ENCRYPTBYKEY batch)
---   • Sin SP calls individuales
---   • Apertura única de symmetric key por batch
--- Target: 500K+ clientes
+-- STEP 5: Generar Clients desde conversiones
+-- Objetivos:
+--   - Crear clientes solo de leads con conversiones (al menos 1)
+--   - Clientes por campana deben reflejar TargetClients de las conversiones (400-1000 por campana, total >= 500k)
+--   - Sin cifrado (pendiente)
 -- =============================================
 
-PRINT 'Generando Clients desde leads convertidos (v4.0 OPTIMIZED)...';
-PRINT '';
+USE PromptCRM;
+GO
 
 SET NOCOUNT ON;
 
--- =============================================
--- CONFIGURACIÓN
--- =============================================
+PRINT 'Generando Clients desde conversiones...';
+PRINT '';
+
+-- Limpieza defensiva
+IF OBJECT_ID('tempdb..#LeadsWithConversions') IS NOT NULL DROP TABLE #LeadsWithConversions;
+IF OBJECT_ID('tempdb..#ClientPlan') IS NOT NULL DROP TABLE #ClientPlan;
+IF OBJECT_ID('tempdb..#FirstNames') IS NOT NULL DROP TABLE #FirstNames;
+IF OBJECT_ID('tempdb..#LastNames') IS NOT NULL DROP TABLE #LastNames;
+IF OBJECT_ID('tempdb..#BatchLeads') IS NOT NULL DROP TABLE #BatchLeads;
+IF OBJECT_ID('tempdb..#LeadNames') IS NOT NULL DROP TABLE #LeadNames;
+
+-- Configuracion
 DECLARE @BatchSize INT = 25000;
-DECLARE @TotalConvertedLeads BIGINT;
 DECLARE @GeneratedClients BIGINT = 0;
 DECLARE @CurrentBatch INT = 1;
 DECLARE @BatchStartTime DATETIME2;
 DECLARE @BatchSeconds INT;
 
--- Obtener currency USD
+-- Catalogos
 DECLARE @USDCurrencyId INT;
-SELECT TOP 1 @USDCurrencyId = currencyId
-FROM [crm].[Currencies]
-WHERE currencyCode = 'USD' AND enabled = 1;
+SELECT TOP 1 @USDCurrencyId = currencyId FROM [crm].[Currencies] WHERE currencyCode = 'USD' AND enabled = 1;
+IF @USDCurrencyId IS NULL SET @USDCurrencyId = 1;
 
-IF @USDCurrencyId IS NULL
-BEGIN
-    PRINT '  ⚠️  No se encontró currency USD habilitada. Usando currencyId = 1 por defecto.';
-    SET @USDCurrencyId = 1;
-END
-
--- Obtener status ACTIVE para clientes
 DECLARE @ActiveStatusId INT;
-SELECT TOP 1 @ActiveStatusId = clientStatusId
-FROM [crm].[ClientStatuses]
-WHERE clientStatusName = 'ACTIVE' AND enabled = 1;
+SELECT TOP 1 @ActiveStatusId = clientStatusId FROM [crm].[ClientStatuses] WHERE clientStatusName = 'ACTIVE' AND enabled = 1;
+IF @ActiveStatusId IS NULL SET @ActiveStatusId = 1;
 
-IF @ActiveStatusId IS NULL
-BEGIN
-    PRINT '  ⚠️  No se encontró status ACTIVE. Usando clientStatusId = 1 por defecto.';
-    SET @ActiveStatusId = 1;
-END
+PRINT '>> Catalogos cargados:';
+PRINT '  - USD Currency ID: ' + CAST(@USDCurrencyId AS VARCHAR(10));
+PRINT '  - ACTIVE Status ID: ' + CAST(@ActiveStatusId AS VARCHAR(10));
+PRINT '';
 
--- Contar leads únicos con conversiones (que aún no son clientes)
-SELECT @TotalConvertedLeads = COUNT(DISTINCT lc.leadId)
+-- Leads con conversiones sin cliente
+PRINT '>> Identificando leads con conversiones (sin cliente aun)...';
+IF OBJECT_ID('tempdb..#LeadsWithConversions') IS NOT NULL DROP TABLE #LeadsWithConversions;
+
+SELECT
+    lc.leadId,
+    l.subscriberId,
+    MIN(lc.createdAt) AS firstPurchaseAt,
+    MAX(lc.createdAt) AS lastPurchaseAt,
+    SUM(lc.conversionValue) AS lifetimeValue,
+    COUNT(*) AS conversions,
+    ls.campaignKey
+INTO #LeadsWithConversions
 FROM [crm].[LeadConversions] lc
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM [crm].[Clients] c
-    WHERE c.leadId = lc.leadId
-);
+JOIN [crm].[LeadEvents] le ON le.leadEventId = lc.leadEventId
+JOIN [crm].[LeadSources] ls ON ls.leadId = le.leadId
+JOIN [crm].[Leads] l ON l.leadId = le.leadId
+WHERE NOT EXISTS (SELECT 1 FROM [crm].[Clients] c WHERE c.leadId = lc.leadId)
+GROUP BY lc.leadId, l.subscriberId, ls.campaignKey;
+
+-- Snapshot para validaciones finales
+SELECT * INTO #ClientPlan FROM #LeadsWithConversions;
+
+DECLARE @TotalConvertedLeads BIGINT = (SELECT COUNT(*) FROM #LeadsWithConversions);
+DECLARE @TotalConversionsForClients BIGINT = (SELECT SUM(conversions) FROM #LeadsWithConversions);
+DECLARE @TotalLTVForClients DECIMAL(18,2) = (SELECT SUM(lifetimeValue) FROM #LeadsWithConversions);
+PRINT '  - Leads convertidos (sin cliente): ' + FORMAT(@TotalConvertedLeads, 'N0');
+PRINT '  - Total conversiones: ' + FORMAT(@TotalConversionsForClients, 'N0');
+PRINT '  - Lifetime Value total: $' + FORMAT(@TotalLTVForClients, 'N2');
+PRINT '  - LTV promedio/cliente: $' + FORMAT(@TotalLTVForClients / NULLIF(@TotalConvertedLeads,1), 'N2');
+PRINT '';
 
 IF @TotalConvertedLeads = 0
 BEGIN
-    PRINT '  ⚠️  No hay leads convertidos sin cliente asociado.';
-    DECLARE @TotalLeadsWithConversions BIGINT = (SELECT COUNT(DISTINCT leadId) FROM [crm].[LeadConversions]);
-    DECLARE @TotalClientsExisting BIGINT = (SELECT COUNT(*) FROM [crm].[Clients]);
-    PRINT '     Total leads con conversiones: ' + FORMAT(@TotalLeadsWithConversions, 'N0');
-    PRINT '     Total clientes existentes: ' + FORMAT(@TotalClientsExisting, 'N0');
+    PRINT '  ERROR: No hay leads convertidos pendientes de cliente.';
     GOTO SkipClientGeneration;
 END
 
 DECLARE @TotalBatches INT = CEILING(CAST(@TotalConvertedLeads AS DECIMAL(18,2)) / @BatchSize);
-
-PRINT '  Leads convertidos a procesar: ' + FORMAT(@TotalConvertedLeads, 'N0');
-PRINT '  Batches: ' + CAST(@TotalBatches AS VARCHAR(10)) + ' de ' + FORMAT(@BatchSize, 'N0') + ' leads';
-PRINT '  Currency: ' + CAST(@USDCurrencyId AS VARCHAR(10)) + ' (USD)';
-PRINT '  Client Status: ' + CAST(@ActiveStatusId AS VARCHAR(10)) + ' (ACTIVE)';
+PRINT '  Batches: ' + CAST(@TotalBatches AS VARCHAR(10)) + ' de ' + FORMAT(@BatchSize, 'N0');
 PRINT '';
 
--- =============================================
--- CARGAR CATÁLOGOS PARA NOMBRES
--- =============================================
+-- Catalogos de nombres
 CREATE TABLE #FirstNames (FirstName VARCHAR(60));
 CREATE TABLE #LastNames (LastName VARCHAR(60));
 
@@ -103,7 +99,16 @@ INSERT INTO #FirstNames (FirstName) VALUES
 ('Edward'),('Rebecca'),('Ronald'),('Sharon'),('Timothy'),('Laura'),('Jason'),('Cynthia'),
 ('Jeffrey'),('Kathleen'),('Ryan'),('Amy'),('Jacob'),('Shirley'),('Gary'),('Angela'),
 ('Nicholas'),('Helen'),('Eric'),('Anna'),('Jonathan'),('Brenda'),('Stephen'),('Pamela'),
-('Larry'),('Nicole'),('Justin'),('Emma'),('Scott'),('Samantha'),('Brandon'),('Katherine');
+('Larry'),('Nicole'),('Justin'),('Emma'),('Scott'),('Samantha'),('Brandon'),('Katherine'),
+('Benjamin'),('Christine'),('Samuel'),('Debra'),('Raymond'),('Rachel'),('Gregory'),('Catherine'),
+('Frank'),('Carolyn'),('Alexander'),('Janet'),('Patrick'),('Ruth'),('Jack'),('Heather'),
+('Dennis'),('Diane'),('Jerry'),('Virginia'),('Tyler'),('Julie'),('Aaron'),('Joyce'),
+('Jose'),('Victoria'),('Adam'),('Olivia'),('Henry'),('Kelly'),('Nathan'),('Christina'),
+('Douglas'),('Lauren'),('Zachary'),('Joan'),('Peter'),('Evelyn'),('Kyle'),('Judith'),
+('Walter'),('Megan'),('Ethan'),('Cheryl'),('Jeremy'),('Andrea'),('Harold'),('Hannah'),
+('Keith'),('Jacqueline'),('Christian'),('Martha'),('Roger'),('Gloria'),('Noah'),('Teresa'),
+('Gerald'),('Ann'),('Carl'),('Sara'),('Terry'),('Madison'),('Sean'),('Frances'),
+('Austin'),('Kathryn'),('Arthur'),('Janice'),('Lawrence'),('Jean');
 
 INSERT INTO #LastNames (LastName) VALUES
 ('Smith'),('Johnson'),('Williams'),('Brown'),('Jones'),('Garcia'),('Miller'),('Davis'),
@@ -112,287 +117,126 @@ INSERT INTO #LastNames (LastName) VALUES
 ('Harris'),('Sanchez'),('Clark'),('Ramirez'),('Lewis'),('Robinson'),('Walker'),('Young'),
 ('Allen'),('King'),('Wright'),('Scott'),('Torres'),('Nguyen'),('Hill'),('Flores'),
 ('Green'),('Adams'),('Nelson'),('Baker'),('Hall'),('Rivera'),('Campbell'),('Mitchell'),
-('Carter'),('Roberts'),('Gomez'),('Phillips'),('Evans'),('Turner'),('Diaz'),('Parker');
+('Carter'),('Roberts'),('Gomez'),('Phillips'),('Evans'),('Turner'),('Diaz'),('Parker'),
+('Cruz'),('Edwards'),('Collins'),('Reyes'),('Stewart'),('Morris'),('Morales'),('Murphy'),
+('Cook'),('Rogers'),('Gutierrez'),('Ortiz'),('Morgan'),('Cooper'),('Peterson'),('Bailey'),
+('Reed'),('Kelly'),('Howard'),('Ramos'),('Kim'),('Cox'),('Ward'),('Richardson'),
+('Watson'),('Brooks'),('Chavez'),('Wood'),('James'),('Bennett'),('Gray'),('Mendoza'),
+('Ruiz'),('Hughes'),('Price'),('Alvarez'),('Castillo'),('Sanders'),('Patel'),('Myers'),
+('Long'),('Ross'),('Foster'),('Jimenez'),('Powell'),('Jenkins'),('Perry'),('Russell'),
+('Sullivan'),('Bell'),('Coleman'),('Butler'),('Henderson'),('Barnes'),('Gonzales'),('Fisher'),
+('Vasquez'),('Simmons'),('Romero'),('Jordan'),('Patterson'),('Alexander'),('Hamilton'),('Graham'),
+('Reynolds'),('Griffin'),('Wallace'),('Moreno'),('West'),('Cole'),('Hayes'),('Bryant'),
+('Herrera'),('Gibson'),('Ellis'),('Tran'),('Medina'),('Aguilar'),('Stevens'),('Murray'),
+('Ford'),('Castro'),('Marshall'),('Owens'),('Harrison'),('Fernandez'),('McDonald'),('Woods'),
+('Washington'),('Kennedy'),('Wells'),('Vargas'),('Henry'),('Chen'),('Freeman'),('Webb');
 
-PRINT 'Catálogos de nombres cargados';
-PRINT '';
-
--- =============================================
--- GENERAR CLIENTES EN BATCHES
--- =============================================
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT 'Iniciando generación de clientes...';
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '';
-
--- Tabla temporal para datos agregados de conversiones por lead
-CREATE TABLE #LeadConversionData (
-    LeadId INT PRIMARY KEY,
-    FirstPurchaseAt DATETIME2 NOT NULL,
-    LastPurchaseAt DATETIME2 NOT NULL,
-    LifetimeValue DECIMAL(18,4) NOT NULL,
-    SubscriberId INT NOT NULL
-);
-
--- Calcular datos de conversión para cada lead convertido
-INSERT INTO #LeadConversionData (LeadId, FirstPurchaseAt, LastPurchaseAt, LifetimeValue, SubscriberId)
-SELECT
-    lc.leadId,
-    MIN(lc.createdAt) AS FirstPurchaseAt,
-    MAX(lc.createdAt) AS LastPurchaseAt,
-    SUM(lc.conversionValue) AS LifetimeValue,
-    l.subscriberId
-FROM [crm].[LeadConversions] lc
-INNER JOIN [crm].[Leads] l ON lc.leadId = l.leadId
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM [crm].[Clients] c
-    WHERE c.leadId = lc.leadId
-)
-GROUP BY lc.leadId, l.subscriberId;
-
-DECLARE @LeadConversionDataCount BIGINT = (SELECT COUNT(*) FROM #LeadConversionData);
-PRINT '  ✓ Datos de conversión agregados para ' + FORMAT(@LeadConversionDataCount, 'N0') + ' leads';
+PRINT '  - Catalogos de nombres cargados';
 PRINT '';
 
 -- Procesar en batches
-WHILE @GeneratedClients < @TotalConvertedLeads
+WHILE EXISTS (SELECT 1 FROM #LeadsWithConversions)
 BEGIN
     SET @BatchStartTime = GETUTCDATE();
 
-    PRINT 'Batch ' + CAST(@CurrentBatch AS VARCHAR(5)) + '/' + CAST(@TotalBatches AS VARCHAR(5)) + ' - Generando hasta ' + FORMAT(@BatchSize, 'N0') + ' clientes...';
+    IF OBJECT_ID('tempdb..#BatchLeads') IS NOT NULL DROP TABLE #BatchLeads;
 
-    -- Tabla temporal para este batch
-    -- OPTIMIZACIÓN: nationalId en texto plano primero, cifrar después en batch
-    CREATE TABLE #BatchClients (
-        RowNum INT IDENTITY(1,1) PRIMARY KEY,
-        LeadId INT NOT NULL,
-        FirstName VARCHAR(60) NOT NULL,
-        LastName VARCHAR(60) NOT NULL,
-        Email VARCHAR(255),
-        PhoneNumber VARCHAR(18),
-        NationalIdClearText VARCHAR(11),  -- Texto plano temporal
-        NationalIdEncrypted VARBINARY(255),  -- Cifrado después
-        FirstPurchaseAt DATETIME2 NOT NULL,
-        LastPurchaseAt DATETIME2 NOT NULL,
-        LifetimeValue DECIMAL(18,4) NOT NULL,
-        ClientStatusId INT NOT NULL,
-        SubscriberId INT NOT NULL,
-        CurrencyId INT NOT NULL
-    );
-
-    -- Seleccionar siguiente batch de leads convertidos
-    -- PASO 1: Obtener leads y sus datos
-    DECLARE @TempLeadData TABLE (
-        LeadId INT,
-        ExistingFirstName VARCHAR(60),
-        ExistingLastName VARCHAR(60),
-        Email VARCHAR(255),
-        PhoneNumber VARCHAR(18),
-        FirstPurchaseAt DATETIME2,
-        LastPurchaseAt DATETIME2,
-        LifetimeValue DECIMAL(18,4),
-        SubscriberId INT
-    );
-
-    INSERT INTO @TempLeadData
     SELECT TOP (@BatchSize)
-        lcd.LeadId,
-        l.firstName,
-        l.lastName,
-        l.email,
-        l.phoneNumber,
-        lcd.FirstPurchaseAt,
-        lcd.LastPurchaseAt,
-        lcd.LifetimeValue,
-        lcd.SubscriberId
-    FROM #LeadConversionData lcd
-    INNER JOIN [crm].[Leads] l ON lcd.LeadId = l.leadId
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM [crm].[Clients] c
-        WHERE c.leadId = lcd.LeadId
-    )
-    ORDER BY lcd.LeadId;
+        leadId,
+        subscriberId,
+        firstPurchaseAt,
+        lastPurchaseAt,
+        lifetimeValue,
+        conversions,
+        campaignKey
+    INTO #BatchLeads
+    FROM #LeadsWithConversions
+    ORDER BY leadId;
 
-    -- PASO 2: Insertar con nombres (existentes o generados con cursor)
-    DECLARE @CurrentLeadId INT;
-    DECLARE @CurrentFirstName VARCHAR(60);
-    DECLARE @CurrentLastName VARCHAR(60);
-    DECLARE @CurrentEmail VARCHAR(255);
-    DECLARE @CurrentPhone VARCHAR(18);
-    DECLARE @CurrentFirstPurchase DATETIME2;
-    DECLARE @CurrentLastPurchase DATETIME2;
-    DECLARE @CurrentLTV DECIMAL(18,4);
-    DECLARE @CurrentSubId INT;
-    DECLARE @GeneratedFirstName VARCHAR(60);
-    DECLARE @GeneratedLastName VARCHAR(60);
-    DECLARE @GeneratedNationalId VARCHAR(11);  -- Solo texto plano
+    -- Generar nombres faltantes desde catalogos
+    IF OBJECT_ID('tempdb..#LeadNames') IS NOT NULL DROP TABLE #LeadNames;
+    SELECT
+        bl.leadId,
+        COALESCE(l.firstName,
+                 (SELECT TOP 1 FirstName FROM #FirstNames ORDER BY NEWID())) AS firstName,
+        COALESCE(l.lastName,
+                 (SELECT TOP 1 LastName FROM #LastNames ORDER BY NEWID())) AS lastName,
+        COALESCE(l.email, 'lead' + CAST(bl.leadId AS VARCHAR(20)) + '@temp.com') AS email,
+        COALESCE(l.phoneNumber, '+1' + RIGHT('000000000' + CAST(ABS(CHECKSUM(NEWID()) % 1000000000) AS VARCHAR(10)), 10)) AS phoneNumber,
+        l.subscriberId
+    INTO #LeadNames
+    FROM #BatchLeads bl
+    JOIN [crm].[Leads] l ON l.leadId = bl.leadId;
 
-    DECLARE client_cursor CURSOR FAST_FORWARD FOR
-    SELECT LeadId, ExistingFirstName, ExistingLastName, Email, PhoneNumber,
-           FirstPurchaseAt, LastPurchaseAt, LifetimeValue, SubscriberId
-    FROM @TempLeadData;
-
-    OPEN client_cursor;
-    FETCH NEXT FROM client_cursor INTO @CurrentLeadId, @CurrentFirstName, @CurrentLastName,
-                                        @CurrentEmail, @CurrentPhone, @CurrentFirstPurchase,
-                                        @CurrentLastPurchase, @CurrentLTV, @CurrentSubId;
-
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        -- Generar firstName si no existe
-        IF @CurrentFirstName IS NULL
-            SELECT TOP 1 @GeneratedFirstName = FirstName FROM #FirstNames ORDER BY NEWID();
-        ELSE
-            SET @GeneratedFirstName = @CurrentFirstName;
-
-        -- Generar lastName si no existe
-        IF @CurrentLastName IS NULL
-            SELECT TOP 1 @GeneratedLastName = LastName FROM #LastNames ORDER BY NEWID();
-        ELSE
-            SET @GeneratedLastName = @CurrentLastName;
-
-        -- Generar nationalId en texto plano (cifrar después en batch)
-        -- Formato: XXX-XX-XXXX (simulado con CHECKSUM para unicidad)
-        SET @GeneratedNationalId =
-            RIGHT('000' + CAST(ABS(CHECKSUM(NEWID()) % 1000) AS VARCHAR(3)), 3) + '-' +
-            RIGHT('00' + CAST(ABS(CHECKSUM(NEWID()) % 100) AS VARCHAR(2)), 2) + '-' +
-            RIGHT('0000' + CAST(ABS(CHECKSUM(NEWID()) % 10000) AS VARCHAR(4)), 4);
-
-        -- Insertar cliente (nationalId sin cifrar aún)
-        INSERT INTO #BatchClients (LeadId, FirstName, LastName, Email, PhoneNumber,
-                                    NationalIdClearText, FirstPurchaseAt, LastPurchaseAt,
-                                    LifetimeValue, ClientStatusId, SubscriberId, CurrencyId)
-        VALUES (@CurrentLeadId, @GeneratedFirstName, @GeneratedLastName, @CurrentEmail,
-                @CurrentPhone, @GeneratedNationalId, @CurrentFirstPurchase,
-                @CurrentLastPurchase, @CurrentLTV, @ActiveStatusId, @CurrentSubId, @USDCurrencyId);
-
-        FETCH NEXT FROM client_cursor INTO @CurrentLeadId, @CurrentFirstName, @CurrentLastName,
-                                            @CurrentEmail, @CurrentPhone, @CurrentFirstPurchase,
-                                            @CurrentLastPurchase, @CurrentLTV, @CurrentSubId;
-    END
-
-    CLOSE client_cursor;
-    DEALLOCATE client_cursor;
-
-    DECLARE @ClientsInBatch INT = (SELECT COUNT(*) FROM #BatchClients);
-
-    IF @ClientsInBatch = 0
-        BREAK;
-
-    -- =============================================
-    -- CIFRADO BATCH DE nationalIds (OPTIMIZACIÓN v4.0)
-    -- =============================================
-    DECLARE @ClientsToEncrypt INT = (SELECT COUNT(*) FROM #BatchClients WHERE NationalIdClearText IS NOT NULL);
-
-    IF @ClientsToEncrypt > 0
-    BEGIN
-        PRINT '  → Cifrando ' + FORMAT(@ClientsToEncrypt, 'N0') + ' nationalIds en batch...';
-
-        -- Abrir llave simétrica UNA SOLA VEZ para todo el batch
-        EXEC sp_executesql N'
-            EXEC master.sys.sp_executesql N''
-                OPEN SYMMETRIC KEY SK_PromptCRM_Master_Key
-                DECRYPTION BY CERTIFICATE Cert_PromptCRM_Master_PII;
-            ''
-        ';
-
-        -- Cifrar TODOS los nationalIds del batch de una sola vez
-        UPDATE #BatchClients
-        SET NationalIdEncrypted = ENCRYPTBYKEY(KEY_GUID('SK_PromptCRM_Master_Key'), NationalIdClearText)
-        WHERE NationalIdClearText IS NOT NULL;
-
-        -- Cerrar llave simétrica
-        EXEC sp_executesql N'
-            EXEC master.sys.sp_executesql N''
-                CLOSE SYMMETRIC KEY SK_PromptCRM_Master_Key;
-            ''
-        ';
-    END
-
-    -- INSERT MASIVO en Clients (con nationalId cifrado)
+    -- Insertar clientes
     INSERT INTO [crm].[Clients] WITH (TABLOCK)
         (firstName, lastName, email, phoneNumber, nationalId, firstPurchaseAt, lastPurchaseAt,
          lifetimeValue, clientStatusId, subscriberId, leadId, currencyId)
     SELECT
-        bc.FirstName, bc.LastName, bc.Email, bc.PhoneNumber, bc.NationalIdEncrypted,
-        bc.FirstPurchaseAt, bc.LastPurchaseAt,
-        bc.LifetimeValue, bc.ClientStatusId, bc.SubscriberId,
-        bc.LeadId, bc.CurrencyId
-    FROM #BatchClients bc
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM [crm].[Clients] c
-        WHERE c.leadId = bc.LeadId
-    );
+        ln.firstName,
+        ln.lastName,
+        ln.email,
+        ln.phoneNumber,
+        CONVERT(varbinary(255), CAST(ln.leadId AS VARCHAR(20))), -- placeholder sin cifrar
+        bl.firstPurchaseAt,
+        bl.lastPurchaseAt,
+        bl.lifetimeValue,
+        @ActiveStatusId,
+        ln.subscriberId,
+        bl.leadId,
+        @USDCurrencyId
+    FROM #BatchLeads bl
+    JOIN #LeadNames ln ON ln.leadId = bl.leadId;
 
     SET @GeneratedClients = @GeneratedClients + @@ROWCOUNT;
 
-    DROP TABLE #BatchClients;
+    -- Eliminar procesados
+    DELETE FROM #LeadsWithConversions WHERE leadId IN (SELECT leadId FROM #BatchLeads);
 
     SET @BatchSeconds = DATEDIFF(SECOND, @BatchStartTime, GETUTCDATE());
-    PRINT '  ✓ Batch completado en ' + CAST(@BatchSeconds AS VARCHAR(10)) + 's';
-    PRINT '    • Clientes generados: ' + FORMAT(@ClientsInBatch, 'N0');
-    PRINT '    • Total acumulado: ' + FORMAT(@GeneratedClients, 'N0') + ' clientes';
-    PRINT '';
-
+    PRINT '  - Batch ' + CAST(@CurrentBatch AS VARCHAR(10)) + ' completado en ' + CAST(@BatchSeconds AS VARCHAR(10)) + 's | Total clientes: ' + FORMAT(@GeneratedClients, 'N0');
     SET @CurrentBatch = @CurrentBatch + 1;
 END
 
--- Cleanup
-DROP TABLE #LeadConversionData;
-DROP TABLE #FirstNames;
-DROP TABLE #LastNames;
+
+PRINT '';
+PRINT 'Validacion de clientes por campana (rango 400-1000, total >= 500k):';
+WITH CampaignClients AS (
+    SELECT
+        cp.campaignKey,
+        COUNT(*) AS Clients
+    FROM #ClientPlan cp
+    JOIN [crm].[Clients] c ON c.leadId = cp.leadId
+    GROUP BY cp.campaignKey
+)
+SELECT
+    campaignKey,
+    Clients,
+    CASE WHEN Clients < 400 OR Clients > 1000 THEN 'WARN: fuera de rango' ELSE '' END AS Flag
+FROM CampaignClients
+ORDER BY campaignKey;
+
+DECLARE @TotalClients BIGINT = (
+    SELECT COUNT(*) FROM #ClientPlan cp
+    JOIN [crm].[Clients] c ON c.leadId = cp.leadId
+);
+
+PRINT '  Total clientes generados: ' + FORMAT(@TotalClients, 'N0');
+IF @TotalClients < 500000
+    PRINT '  WARN: total clientes < 500,000';
 
 SkipClientGeneration:
 
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '✓ GENERACIÓN DE CLIENTS COMPLETADA';
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '';
-PRINT '  Total generado: ' + FORMAT(@GeneratedClients, 'N0') + ' clientes';
-PRINT '';
-
--- Estadísticas
-PRINT '  Estadísticas de clientes generados:';
-
-DECLARE @AvgLifetimeValue DECIMAL(18,2);
-DECLARE @TotalLifetimeValue DECIMAL(18,2);
-DECLARE @MaxLifetimeValue DECIMAL(18,2);
-
-SELECT
-    @AvgLifetimeValue = AVG(lifetimeValue),
-    @TotalLifetimeValue = SUM(lifetimeValue),
-    @MaxLifetimeValue = MAX(lifetimeValue)
-FROM [crm].[Clients];
-
-PRINT '    • Lifetime Value Promedio: ' + FORMAT(@AvgLifetimeValue, 'C2');
-PRINT '    • Lifetime Value Total: ' + FORMAT(@TotalLifetimeValue, 'C2');
-PRINT '    • Lifetime Value Máximo: ' + FORMAT(@MaxLifetimeValue, 'C2');
-PRINT '';
-
--- Verificar que NO hay NULLs en campos requeridos
-DECLARE @ClientsWithNullFirstName INT;
-DECLARE @ClientsWithNullLastName INT;
-
-SELECT @ClientsWithNullFirstName = COUNT(*)
-FROM [crm].[Clients]
-WHERE firstName IS NULL;
-
-SELECT @ClientsWithNullLastName = COUNT(*)
-FROM [crm].[Clients]
-WHERE lastName IS NULL;
-
-IF @ClientsWithNullFirstName > 0 OR @ClientsWithNullLastName > 0
-BEGIN
-    PRINT '  ⚠️  ADVERTENCIA: Se encontraron clientes con nombres NULL:';
-    PRINT '    • firstName NULL: ' + CAST(@ClientsWithNullFirstName AS VARCHAR(10));
-    PRINT '    • lastName NULL: ' + CAST(@ClientsWithNullLastName AS VARCHAR(10));
-END
-ELSE
-BEGIN
-    PRINT '  ✓ Validación: Todos los clientes tienen firstName y lastName';
-END
+-- Limpieza
+IF OBJECT_ID('tempdb..#LeadsWithConversions') IS NOT NULL DROP TABLE #LeadsWithConversions;
+IF OBJECT_ID('tempdb..#FirstNames') IS NOT NULL DROP TABLE #FirstNames;
+IF OBJECT_ID('tempdb..#LastNames') IS NOT NULL DROP TABLE #LastNames;
+IF OBJECT_ID('tempdb..#ClientPlan') IS NOT NULL DROP TABLE #ClientPlan;
+IF OBJECT_ID('tempdb..#BatchLeads') IS NOT NULL DROP TABLE #BatchLeads;
+IF OBJECT_ID('tempdb..#LeadNames') IS NOT NULL DROP TABLE #LeadNames;
 
 PRINT '';
+PRINT '=============================================';
+PRINT 'STEP 5 COMPLETADO';
+PRINT '=============================================';
+GO

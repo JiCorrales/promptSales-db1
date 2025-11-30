@@ -1,25 +1,39 @@
--- =============================================
--- STEP 2: Generar 1.5M Leads + LeadSources (1:1)
--- =============================================
--- Genera leads y sus lead sources simultáneamente con:
---   - Distribución multi-tenant inteligente
---   - Tokens únicos (GUID)
---   - Datos personales realistas (95% incompletos, 5% completos)
---   - LeadSource coherente por cada Lead (1:1)
---   - Tier = 1 (COLD) para todos
---   - Combinaciones semánticas coherentes (Mobile→Android/iOS)
--- Target: 1,500,000 Leads + 1,500,000 LeadSources
--- =============================================
+
+Use PromptCRM
+GO
 
 SET NOCOUNT ON;
 
 PRINT 'Generando 1.5 millones de Leads + LeadSources en batches...';
 PRINT '';
 
+-- Limpieza defensiva de temp tables si el script falló antes
+IF OBJECT_ID('tempdb..#SubscriberWeights') IS NOT NULL DROP TABLE #SubscriberWeights;
+IF OBJECT_ID('tempdb..#CountryIds') IS NOT NULL DROP TABLE #CountryIds;
+IF OBJECT_ID('tempdb..#SourceTypes') IS NOT NULL DROP TABLE #SourceTypes;
+IF OBJECT_ID('tempdb..#Systems') IS NOT NULL DROP TABLE #Systems;
+IF OBJECT_ID('tempdb..#Mediums') IS NOT NULL DROP TABLE #Mediums;
+IF OBJECT_ID('tempdb..#Channels') IS NOT NULL DROP TABLE #Channels;
+IF OBJECT_ID('tempdb..#Devices') IS NOT NULL DROP TABLE #Devices;
+IF OBJECT_ID('tempdb..#Platforms') IS NOT NULL DROP TABLE #Platforms;
+IF OBJECT_ID('tempdb..#Browsers') IS NOT NULL DROP TABLE #Browsers;
+IF OBJECT_ID('tempdb..#PromptAdsCampaigns') IS NOT NULL DROP TABLE #PromptAdsCampaigns;
+IF OBJECT_ID('tempdb..#Numbers') IS NOT NULL DROP TABLE #Numbers;
+IF OBJECT_ID('tempdb..#CampaignLeadSlots') IS NOT NULL DROP TABLE #CampaignLeadSlots;
+IF OBJECT_ID('tempdb..#FirstNames') IS NOT NULL DROP TABLE #FirstNames;
+IF OBJECT_ID('tempdb..#LastNames') IS NOT NULL DROP TABLE #LastNames;
+IF OBJECT_ID('tempdb..#BatchLeads') IS NOT NULL DROP TABLE #BatchLeads;
+IF OBJECT_ID('tempdb..#GenderIds') IS NOT NULL DROP TABLE #GenderIds;
+IF OBJECT_ID('tempdb..#RaceIds') IS NOT NULL DROP TABLE #RaceIds;
+IF OBJECT_ID('tempdb..#EthnicityIds') IS NOT NULL DROP TABLE #EthnicityIds;
+IF OBJECT_ID('tempdb..#StateIds') IS NOT NULL DROP TABLE #StateIds;
+IF OBJECT_ID('tempdb..#CityIds') IS NOT NULL DROP TABLE #CityIds;
+
 -- =============================================
 -- CONFIGURACIÓN
 -- =============================================
 DECLARE @TargetLeadCount INT = 1500000;
+DECLARE @MaxPromptAdsCampaigns INT = 1000; -- Limitar campañas utilizadas
 DECLARE @BatchSize INT = 50000;
 DECLARE @TotalBatches INT = @TargetLeadCount / @BatchSize;
 DECLARE @CurrentBatch INT = 1;
@@ -34,6 +48,12 @@ DECLARE @ProbHasLastName DECIMAL(5,2) = 0.55;
 DECLARE @ProbHasEmail DECIMAL(5,2) = 0.40;
 DECLARE @ProbHasPhone DECIMAL(5,2) = 0.25;
 DECLARE @ProbHasGender DECIMAL(5,2) = 0.30;
+-- ★ Demographics probabilities
+DECLARE @ProbHasRace DECIMAL(5,2) = 0.50;       -- 50% tienen race
+DECLARE @ProbHasEthnicity DECIMAL(5,2) = 0.45;  -- 45% tienen ethnicity
+-- ★ Geography probabilities (buckets)
+-- 40% City+State+Country, 20% State+Country, 20% Country, 20% NULL
+DECLARE @LeadStatusActiveId INT;
 
 -- =============================================
 -- CARGAR CATÁLOGOS EN MEMORIA
@@ -59,9 +79,31 @@ SELECT
 FROM [crm].[Subscribers]
 WHERE status = 'ACTIVE';
 
+-- Fallback: si no hay ACTIVE, usar todos los subscribers habilitados
+DECLARE @SubscriberCount INT = (SELECT COUNT(*) FROM #SubscriberWeights);
+IF @SubscriberCount = 0
+BEGIN
+    INSERT INTO #SubscriberWeights (SubscriberId, Weight)
+    SELECT subscriberId, 1.0
+    FROM [crm].[Subscribers];
+    SET @SubscriberCount = (SELECT COUNT(*) FROM #SubscriberWeights);
+END
+
+IF @SubscriberCount = 0
+BEGIN
+    RAISERROR('No hay subscribers disponibles para generar leads.', 16, 1);
+    RETURN;
+END
+
 -- Calcular pesos acumulativos para sampling
 DECLARE @TotalWeight DECIMAL(10,2);
 SELECT @TotalWeight = SUM(Weight) FROM #SubscriberWeights;
+
+IF ISNULL(@TotalWeight, 0) = 0
+BEGIN
+    RAISERROR('No se pudieron calcular pesos de subscribers.', 16, 1);
+    RETURN;
+END
 
 UPDATE #SubscriberWeights
 SET Weight = Weight / @TotalWeight;  -- Normalizar a suma = 1.0
@@ -78,7 +120,6 @@ SET sw.CumulativeWeight = c.CumulativeWeight
 FROM #SubscriberWeights sw
 INNER JOIN CumulativeCalc c ON sw.SubscriberId = c.SubscriberId;
 
-DECLARE @SubscriberCount INT = (SELECT COUNT(*) FROM #SubscriberWeights);
 PRINT '  ✓ ' + CAST(@SubscriberCount AS VARCHAR(10)) + ' subscribers cargados';
 
 -- Tabla temporal para Countries
@@ -109,7 +150,161 @@ INSERT INTO #Devices SELECT deviceTypeId, deviceTypeName FROM [crm].[DeviceTypes
 INSERT INTO #Platforms SELECT devicePlatformId, devicePlatformName FROM [crm].[DevicePlatforms] WHERE enabled = 1;
 INSERT INTO #Browsers SELECT browserId, browserName FROM [crm].[Browsers] WHERE enabled = 1;
 
+-- ★ Demographic catalogs (gender, race, ethnicity)
+CREATE TABLE #GenderIds (GenderId INT PRIMARY KEY);
+INSERT INTO #GenderIds (GenderId)
+SELECT demographicGenderId FROM [crm].[DemographicGenders] WHERE enabled = 1;
+
+CREATE TABLE #RaceIds (RaceId INT PRIMARY KEY);
+INSERT INTO #RaceIds (RaceId)
+SELECT demographicRaceId FROM [crm].[DemographicRaces] WHERE enabled = 1;
+
+CREATE TABLE #EthnicityIds (EthnicityId INT PRIMARY KEY);
+INSERT INTO #EthnicityIds (EthnicityId)
+SELECT demographicEthnicityId FROM [crm].[DemographicEthnicities] WHERE enabled = 1;
+
+-- ★ Geography catalogs (states, cities with coherence)
+CREATE TABLE #StateIds (StateId INT PRIMARY KEY, CountryId INT);
+INSERT INTO #StateIds (StateId, CountryId)
+SELECT stateId, countryId FROM [crm].[States] WHERE enabled = 1;
+
+CREATE TABLE #CityIds (CityId INT PRIMARY KEY, StateId INT, CountryId INT);
+INSERT INTO #CityIds (CityId, StateId, CountryId)
+SELECT c.cityId, c.stateId, s.countryId
+FROM [crm].[Cities] c
+INNER JOIN [crm].[States] s ON s.stateId = c.stateId AND s.enabled = 1
+WHERE c.enabled = 1;
+
+-- Lead status activo (usar uno coherente y fijo para todos)
+SELECT TOP 1 @LeadStatusActiveId = leadStatusId
+FROM [crm].[LeadStatus]
+WHERE enabled = 1
+ORDER BY leadStatusId;
+
+IF @LeadStatusActiveId IS NULL
+BEGIN
+    RAISERROR('No hay LeadStatus habilitados en crm.LeadStatus.', 16, 1);
+    RETURN;
+END
+
 PRINT '  ✓ Catálogos de LeadSource cargados';
+
+-- =============================================
+-- CARGAR CAMPAÑAS REALES DE PROMPTADS
+-- ★ v3.1: INCLUYE FECHAS PARA TEMPORALIDAD
+-- =============================================
+PRINT '  Cargando campañas de PromptAds con fechas (Julio 2024 - Enero 2026)...';
+
+CREATE TABLE #PromptAdsCampaigns (
+    RowNum INT IDENTITY(1,1),
+    CampaignId BIGINT,
+    CampaignKey VARCHAR(255),
+    StartDate DATETIME2,          -- ★ NUEVO: Fecha inicio de campaña
+    EndDate DATETIME2,            -- ★ NUEVO: Fecha fin de campaña
+    DurationDays INT,             -- ★ NUEVO: Duración en días
+    LeadsToGenerate INT DEFAULT 0 -- ★ NUEVO: Leads a asignar a esta campaña
+);
+
+-- Obtener campañas de PromptAds CON FECHAS dentro del período Julio 2024 - Enero 2026
+-- Límite: @MaxPromptAdsCampaigns = 1000 campañas ALEATORIAS (no secuenciales)
+INSERT INTO #PromptAdsCampaigns (CampaignId, CampaignKey, StartDate, EndDate, DurationDays)
+SELECT TOP (@MaxPromptAdsCampaigns)
+    CampaignId,
+    'CAMP-' + CAST(CampaignId AS VARCHAR(20)),
+    startDate,
+    endDate,
+    DATEDIFF(DAY, startDate, endDate)
+FROM OPENQUERY([PromptAds_LinkedServer],
+    'SELECT CampaignId, startDate, endDate
+     FROM PromptAds.dbo.Campaigns
+     WHERE startDate >= ''2024-07-01''
+       AND endDate <= ''2026-01-31''')
+ORDER BY NEWID();  -- Selección aleatoria para mejor distribución
+
+DECLARE @CampaignCount INT = (SELECT COUNT(*) FROM #PromptAdsCampaigns);
+
+IF @CampaignCount = 0
+BEGIN
+    PRINT '  ⚠️  ERROR: No se pudieron cargar campañas de PromptAds.';
+    PRINT '  ⚠️  Verifique que el Linked Server [PromptAds_LinkedServer] esté configurado.';
+    RAISERROR('No se pueden generar leads sin campañas de PromptAds', 16, 1);
+    RETURN;
+END
+
+PRINT '  ✓ ' + CAST(@CampaignCount AS VARCHAR(10)) + ' campañas cargadas desde PromptAds (con fechas)';
+
+-- ★ DISTRIBUIR 1.5M LEADS ENTRE CAMPAÑAS
+-- Campañas largas obtienen más leads que campañas cortas (realista)
+UPDATE #PromptAdsCampaigns
+SET LeadsToGenerate =
+    CASE
+        -- Campañas largas (>60 días): 1400-1799 leads
+        WHEN DurationDays > 60 THEN 1400 + (ABS(CHECKSUM(NEWID())) % 400)
+        -- Campañas medianas (30-60 días): 1200-1499 leads
+        WHEN DurationDays > 30 THEN 1200 + (ABS(CHECKSUM(NEWID())) % 300)
+        -- Campañas cortas (<=30 días): 1000-1299 leads
+        ELSE 1000 + (ABS(CHECKSUM(NEWID())) % 300)
+    END;
+
+DECLARE @ActualLeadsDistributed INT = (SELECT SUM(LeadsToGenerate) FROM #PromptAdsCampaigns);
+DECLARE @ScaleFactor DECIMAL(18,8) = CAST(@TargetLeadCount AS DECIMAL(18,8)) / NULLIF(@ActualLeadsDistributed, 0);
+
+-- Reescalar para aproximar al target total
+UPDATE #PromptAdsCampaigns
+SET LeadsToGenerate = CAST(ROUND(LeadsToGenerate * @ScaleFactor, 0) AS INT);
+
+-- Ajuste fino por residuo
+DECLARE @Residual INT = @TargetLeadCount - (SELECT SUM(LeadsToGenerate) FROM #PromptAdsCampaigns);
+IF @Residual <> 0
+BEGIN
+    WITH cte AS (
+        SELECT TOP (ABS(@Residual)) RowNum
+        FROM #PromptAdsCampaigns
+        ORDER BY NEWID()
+    )
+    UPDATE c
+    SET LeadsToGenerate = LeadsToGenerate + CASE WHEN @Residual > 0 THEN 1 ELSE -1 END
+    FROM #PromptAdsCampaigns c
+    JOIN cte ON c.RowNum = cte.RowNum;
+END
+
+SET @ActualLeadsDistributed = (SELECT SUM(LeadsToGenerate) FROM #PromptAdsCampaigns);
+PRINT '  ✓ Distribución planificada: ' + FORMAT(@ActualLeadsDistributed, 'N0') + ' leads (~' + CAST(@ActualLeadsDistributed / @CampaignCount AS VARCHAR(10)) + ' leads/campaña)';
+
+-- Expandir slots de leads por campaña para asignación determinística (exacta)
+-- Generar tabla de números hasta @TargetLeadCount de forma más liviana
+;WITH Tally AS (
+    SELECT TOP (@TargetLeadCount)
+           ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects a
+    CROSS JOIN sys.all_objects b  -- ~4M filas, suficiente para 1.5M
+)
+SELECT n AS n
+INTO #Numbers
+FROM Tally;
+
+-- Rango acumulado por campaña
+;WITH CampaignRanges AS (
+    SELECT CampaignId, CampaignKey, StartDate, EndDate, DurationDays, LeadsToGenerate,
+           SUM(LeadsToGenerate) OVER (ORDER BY CampaignId) AS CumEnd,
+           SUM(LeadsToGenerate) OVER (ORDER BY CampaignId) - LeadsToGenerate + 1 AS CumStart
+    FROM #PromptAdsCampaigns
+)
+SELECT n.n AS RowNum,
+       c.CampaignId,
+       c.CampaignKey,
+       c.StartDate,
+       c.EndDate,
+       c.DurationDays
+INTO #CampaignLeadSlots
+FROM #Numbers n
+JOIN CampaignRanges c
+  ON n.n BETWEEN c.CumStart AND c.CumEnd
+ORDER BY n.n;
+
+CREATE CLUSTERED INDEX IX_CampaignLeadSlots_RowNum ON #CampaignLeadSlots(RowNum);
+
+DROP TABLE #Numbers;
 
 -- Arrays de nombres y apellidos para generación
 CREATE TABLE #FirstNames (RowNum INT IDENTITY(1,1), FirstName VARCHAR(60));
@@ -189,7 +384,11 @@ BEGIN
         LeadTierId INT DEFAULT 1,    -- COLD
         SubscriberId INT,
         CountryId INT,
+        StateId INT,                      -- ★ NUEVO: Geography
+        CityId INT,                       -- ★ NUEVO: Geography
         DemographicGenderId INT,
+        DemographicRaceId INT,            -- ★ NUEVO: Demographics
+        DemographicEthnicityId INT,       -- ★ NUEVO: Demographics
         CreatedAt DATETIME2,
         -- LeadSource fields
         CampaignKey VARCHAR(255),
@@ -207,16 +406,25 @@ BEGIN
     DECLARE @RandomVal DECIMAL(10,8);
     DECLARE @SelectedSubscriberId INT;
     DECLARE @SelectedCountryId INT;
+    DECLARE @SelectedStateId INT;            -- ★ NUEVO: Geography
+    DECLARE @SelectedCityId INT;             -- ★ NUEVO: Geography
     DECLARE @GeneratedFirstName VARCHAR(60);
     DECLARE @GeneratedLastName VARCHAR(60);
     DECLARE @GeneratedEmail VARCHAR(255);
     DECLARE @GeneratedPhone VARCHAR(18);
     DECLARE @GeneratedGender INT;
+    DECLARE @GeneratedRace INT;              -- ★ NUEVO: Demographics
+    DECLARE @GeneratedEthnicity INT;         -- ★ NUEVO: Demographics
+    DECLARE @GeneratedLeadStatusId INT;
     DECLARE @CreatedDate DATETIME2;
     DECLARE @DaysAgo INT;
+    DECLARE @GeoBucket INT;                  -- ★ NUEVO: Geography bucket (0-100)
 
     -- LeadSource variables
     DECLARE @CampaignKey VARCHAR(255);
+    DECLARE @CampaignStartDate DATETIME2;  -- ★ NUEVO v3.1
+    DECLARE @CampaignEndDate DATETIME2;    -- ★ NUEVO v3.1
+    DECLARE @CampaignDurationDays INT;     -- ★ NUEVO v3.1
     DECLARE @SelectedSourceTypeId INT;
     DECLARE @SelectedSystemId INT;
     DECLARE @SelectedMediumId INT;
@@ -226,9 +434,13 @@ BEGIN
     DECLARE @SelectedBrowserId INT;
     DECLARE @DeviceName VARCHAR(60);
     DECLARE @PlatformName VARCHAR(60);
+    DECLARE @SlotRowNum INT;
 
     WHILE @i <= @BatchSize
     BEGIN
+        -- Determinar slot global de lead para asignación exacta de campaña
+        SET @SlotRowNum = ((@CurrentBatch - 1) * @BatchSize) + @i;
+
         -- Seleccionar subscriber basado en distribución de pesos
         SET @RandomVal = RAND();
         SELECT TOP 1 @SelectedSubscriberId = SubscriberId
@@ -236,14 +448,36 @@ BEGIN
         WHERE CumulativeWeight >= @RandomVal
         ORDER BY CumulativeWeight;
 
+        -- LeadStatus fijo (activo)
+        SET @GeneratedLeadStatusId = @LeadStatusActiveId;
+
         -- Seleccionar Country aleatorio
         SELECT TOP 1 @SelectedCountryId = CountryId
         FROM #CountryIds
         ORDER BY NEWID();
 
-        -- Fecha creación aleatoria en últimos 18 meses
-        SET @DaysAgo = ABS(CHECKSUM(NEWID()) % 540); -- 0-540 días
-        SET @CreatedDate = DATEADD(DAY, -@DaysAgo, GETUTCDATE());
+        -- ★ v3.1: Seleccionar campaña según slot (exacto a LeadsToGenerate)
+        SELECT
+            @CampaignKey = CampaignKey,
+            @CampaignStartDate = StartDate,
+            @CampaignEndDate = EndDate,
+            @CampaignDurationDays = DurationDays
+        FROM #CampaignLeadSlots
+        WHERE RowNum = @SlotRowNum;
+
+        -- ★ v3.1: Fecha creación aleatoria DENTRO del período de la campaña
+        IF @CampaignDurationDays > 0
+        BEGIN
+            SET @DaysAgo = ABS(CHECKSUM(NEWID()) % (@CampaignDurationDays + 1));
+            SET @CreatedDate = DATEADD(DAY, @DaysAgo, @CampaignStartDate);
+            -- Agregar hora aleatoria (0-23h)
+            SET @CreatedDate = DATEADD(HOUR, ABS(CHECKSUM(NEWID()) % 24), @CreatedDate);
+        END
+        ELSE
+        BEGIN
+            -- Si campaña de 1 día, usar startDate + hora aleatoria
+            SET @CreatedDate = DATEADD(HOUR, ABS(CHECKSUM(NEWID()) % 24), @CampaignStartDate);
+        END
 
         -- Decidir si tiene datos completos (5% probabilidad)
         IF RAND() < @ProbCompleteData
@@ -253,7 +487,10 @@ BEGIN
             SELECT TOP 1 @GeneratedLastName = LastName FROM #LastNames ORDER BY NEWID();
             SET @GeneratedEmail = LOWER(@GeneratedFirstName) + '.' + LOWER(@GeneratedLastName) + '@example.com';
             SET @GeneratedPhone = '+1' + RIGHT('000000000' + CAST(ABS(CHECKSUM(NEWID()) % 1000000000) AS VARCHAR(10)), 10);
-            SET @GeneratedGender = (ABS(CHECKSUM(NEWID()) % 3) + 1); -- 1, 2, o 3
+            IF EXISTS (SELECT 1 FROM #GenderIds)
+                SELECT TOP 1 @GeneratedGender = GenderId FROM #GenderIds ORDER BY NEWID();
+            ELSE
+                SET @GeneratedGender = NULL;
         END
         ELSE
         BEGIN
@@ -278,18 +515,72 @@ BEGIN
             ELSE
                 SET @GeneratedPhone = NULL;
 
-            IF RAND() < @ProbHasGender
-                SET @GeneratedGender = (ABS(CHECKSUM(NEWID()) % 3) + 1);
+            IF RAND() < @ProbHasGender AND EXISTS (SELECT 1 FROM #GenderIds)
+                SELECT TOP 1 @GeneratedGender = GenderId FROM #GenderIds ORDER BY NEWID();
             ELSE
                 SET @GeneratedGender = NULL;
         END
 
         -- =========================================
-        -- GENERAR LEADSOURCE (coherencia semántica)
+        -- ★ DEMOGRAPHICS: Race / Ethnicity (parciales)
         -- =========================================
+        IF RAND() < @ProbHasRace AND EXISTS (SELECT 1 FROM #RaceIds)
+            SELECT TOP 1 @GeneratedRace = RaceId FROM #RaceIds ORDER BY NEWID();
+        ELSE
+            SET @GeneratedRace = NULL;
 
-        -- Campaign Key único
-        SET @CampaignKey = 'CMP-' + CAST(@CurrentBatch AS VARCHAR(5)) + '-' + CAST(@i AS VARCHAR(10));
+        IF RAND() < @ProbHasEthnicity AND EXISTS (SELECT 1 FROM #EthnicityIds)
+            SELECT TOP 1 @GeneratedEthnicity = EthnicityId FROM #EthnicityIds ORDER BY NEWID();
+        ELSE
+            SET @GeneratedEthnicity = NULL;
+
+        -- =========================================
+        -- ★ GEOGRAPHY: Country/State/City (jerárquico con buckets)
+        -- Buckets: 40% City+State+Country, 20% State+Country, 20% Country, 20% NULL
+        -- =========================================
+        SET @GeoBucket = ABS(CHECKSUM(NEWID()) % 100); -- 0-99
+
+        IF @GeoBucket < 40 AND EXISTS (SELECT 1 FROM #CityIds)
+        BEGIN
+            -- 40%: City + State + Country coherentes
+            SELECT TOP 1
+                @SelectedCityId = CityId,
+                @SelectedStateId = StateId,
+                @SelectedCountryId = CountryId
+            FROM #CityIds
+            ORDER BY NEWID();
+        END
+        ELSE IF @GeoBucket < 60 AND EXISTS (SELECT 1 FROM #StateIds)
+        BEGIN
+            -- 20%: State + Country coherentes (City NULL)
+            SELECT TOP 1
+                @SelectedStateId = StateId,
+                @SelectedCountryId = CountryId
+            FROM #StateIds
+            ORDER BY NEWID();
+            SET @SelectedCityId = NULL;
+        END
+        ELSE IF @GeoBucket < 80 AND EXISTS (SELECT 1 FROM #CountryIds)
+        BEGIN
+            -- 20%: Solo Country (State y City NULL)
+            SELECT TOP 1 @SelectedCountryId = CountryId
+            FROM #CountryIds
+            ORDER BY NEWID();
+            SET @SelectedStateId = NULL;
+            SET @SelectedCityId = NULL;
+        END
+        ELSE
+        BEGIN
+            -- 20%: Sin ubicación (todo NULL)
+            SET @SelectedCountryId = NULL;
+            SET @SelectedStateId = NULL;
+            SET @SelectedCityId = NULL;
+        END
+
+        -- =========================================
+        -- GENERAR LEADSOURCE (coherencia semántica)
+        -- ★ v3.1: CampaignKey ya seleccionado arriba (líneas 309-316)
+        -- =========================================
 
         -- Seleccionar tipo de fuente
         SELECT TOP 1 @SelectedSourceTypeId = SourceTypeId FROM #SourceTypes ORDER BY NEWID();
@@ -364,12 +655,17 @@ BEGIN
         END
 
         INSERT INTO #BatchLeads
-            (FirstName, LastName, Email, PhoneNumber, SubscriberId, CountryId,
-             DemographicGenderId, CreatedAt, CampaignKey, SourceTypeId, SystemId,
+            (FirstName, LastName, Email, PhoneNumber, LeadStatusId, LeadTierId,
+             SubscriberId, CountryId, StateId, CityId,
+             DemographicGenderId, DemographicRaceId, DemographicEthnicityId,
+             CreatedAt, CampaignKey, SourceTypeId, SystemId,
              MediumId, ChannelId, DeviceId, PlatformId, BrowserId)
         VALUES
             (@GeneratedFirstName, @GeneratedLastName, @GeneratedEmail, @GeneratedPhone,
-             @SelectedSubscriberId, @SelectedCountryId, @GeneratedGender, @CreatedDate,
+             @GeneratedLeadStatusId, 1,
+             @SelectedSubscriberId, @SelectedCountryId, @SelectedStateId, @SelectedCityId,
+             @GeneratedGender, @GeneratedRace, @GeneratedEthnicity,
+             @CreatedDate,
              @CampaignKey, @SelectedSourceTypeId, @SelectedSystemId, @SelectedMediumId,
              @SelectedChannelId, @SelectedDeviceId, @SelectedPlatformId, @SelectedBrowserId);
 
@@ -383,10 +679,12 @@ BEGIN
     -- Primero insertar Leads
     INSERT INTO [crm].[Leads] WITH (TABLOCK)
         (firstName, lastName, email, phoneNumber, leadToken, leadStatusId,
-         leadTierId, subscriberId, countryId, demographicGenderId, createdAt)
+         leadTierId, subscriberId, countryId, stateId, cityId,
+         demographicGenderId, demographicRaceId, demographicEthnicityId, createdAt)
     SELECT
         FirstName, LastName, Email, PhoneNumber, LeadToken, LeadStatusId,
-        LeadTierId, SubscriberId, CountryId, DemographicGenderId, CreatedAt
+        LeadTierId, SubscriberId, CountryId, StateId, CityId,
+        DemographicGenderId, DemographicRaceId, DemographicEthnicityId, CreatedAt
     FROM #BatchLeads
     ORDER BY RowNum;
 
@@ -421,18 +719,26 @@ BEGIN
     SET @CurrentBatch = @CurrentBatch + 1;
 END
 
--- Cleanup
-DROP TABLE #SubscriberWeights;
-DROP TABLE #CountryIds;
-DROP TABLE #SourceTypes;
-DROP TABLE #Systems;
-DROP TABLE #Mediums;
-DROP TABLE #Channels;
-DROP TABLE #Devices;
-DROP TABLE #Platforms;
-DROP TABLE #Browsers;
-DROP TABLE #FirstNames;
-DROP TABLE #LastNames;
+-- Cleanup: Dropear TODAS las tablas temporales creadas
+IF OBJECT_ID('tempdb..#SubscriberWeights') IS NOT NULL DROP TABLE #SubscriberWeights;
+IF OBJECT_ID('tempdb..#CountryIds') IS NOT NULL DROP TABLE #CountryIds;
+IF OBJECT_ID('tempdb..#SourceTypes') IS NOT NULL DROP TABLE #SourceTypes;
+IF OBJECT_ID('tempdb..#Systems') IS NOT NULL DROP TABLE #Systems;
+IF OBJECT_ID('tempdb..#Mediums') IS NOT NULL DROP TABLE #Mediums;
+IF OBJECT_ID('tempdb..#Channels') IS NOT NULL DROP TABLE #Channels;
+IF OBJECT_ID('tempdb..#Devices') IS NOT NULL DROP TABLE #Devices;
+IF OBJECT_ID('tempdb..#Platforms') IS NOT NULL DROP TABLE #Platforms;
+IF OBJECT_ID('tempdb..#Browsers') IS NOT NULL DROP TABLE #Browsers;
+IF OBJECT_ID('tempdb..#GenderIds') IS NOT NULL DROP TABLE #GenderIds;
+IF OBJECT_ID('tempdb..#RaceIds') IS NOT NULL DROP TABLE #RaceIds;
+IF OBJECT_ID('tempdb..#EthnicityIds') IS NOT NULL DROP TABLE #EthnicityIds;
+IF OBJECT_ID('tempdb..#StateIds') IS NOT NULL DROP TABLE #StateIds;
+IF OBJECT_ID('tempdb..#CityIds') IS NOT NULL DROP TABLE #CityIds;
+IF OBJECT_ID('tempdb..#PromptAdsCampaigns') IS NOT NULL DROP TABLE #PromptAdsCampaigns;
+IF OBJECT_ID('tempdb..#CampaignLeadSlots') IS NOT NULL DROP TABLE #CampaignLeadSlots;
+IF OBJECT_ID('tempdb..#FirstNames') IS NOT NULL DROP TABLE #FirstNames;
+IF OBJECT_ID('tempdb..#LastNames') IS NOT NULL DROP TABLE #LastNames;
+IF OBJECT_ID('tempdb..#BatchLeads') IS NOT NULL DROP TABLE #BatchLeads;
 
 PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
 PRINT '✓ GENERACIÓN DE LEADS + LEADSOURCES COMPLETADA';

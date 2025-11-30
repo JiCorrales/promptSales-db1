@@ -1,301 +1,322 @@
 -- =============================================
--- STEP 4: Generar LeadConversions v2
--- =============================================
--- Genera conversiones para subset de leads con eventos:
---   - 40% de leads con eventos convierten
---   - Mayor probabilidad si tiene eventos "CONVERSION_INTENT"
---   - conversionValue NOT NULL (5-500 USD)
---   - leadEventId NOT NULL (referencia a evento específico)
---   - currencyId NOT NULL
---   - occurredAt posterior al último LeadEvent
---   - Un lead puede tener múltiples conversiones
--- Target: ~600K conversiones
+-- STEP 4: Generar LeadConversions alineadas a PromptAds
+-- Objetivos:
+--   - 400-1000 clientes por campana (TargetClients)
+--   - Total clientes >= 500k
+--   - Suma de conversionValue por campana = revenue de PromptAds (o fallback)
+--   - Solo eventos PURCHASE -> conversiones
+--   - Sin cifrado (pendiente)
 -- =============================================
 
-PRINT 'Generando LeadConversions...';
-PRINT '';
+USE PromptCRM;
+GO
 
 SET NOCOUNT ON;
 
--- =============================================
--- CONFIGURACIÓN
--- =============================================
-DECLARE @TargetConversionRate DECIMAL(5,2) = 0.40; -- 40% de leads convierten
-DECLARE @MultipleConversionProb DECIMAL(5,2) = 0.15; -- 15% tienen múltiples conversiones
-DECLARE @LeadsPerBatch INT = 50000;
-DECLARE @TotalLeadsWithEvents BIGINT;
-DECLARE @TargetConversions BIGINT;
-DECLARE @GeneratedConversions BIGINT = 0;
-DECLARE @ProcessedLeads BIGINT = 0;
-DECLARE @CurrentBatch INT = 1;
-DECLARE @BatchStartTime DATETIME2;
-DECLARE @BatchSeconds INT;
-
--- Contar leads con eventos
-SELECT @TotalLeadsWithEvents = COUNT(DISTINCT leadId)
-FROM [crm].[LeadEvents];
-
-SET @TargetConversions = CAST(@TotalLeadsWithEvents * @TargetConversionRate AS BIGINT);
-
-PRINT '  Leads con eventos: ' + FORMAT(@TotalLeadsWithEvents, 'N0');
-PRINT '  Target conversions (40%): ' + FORMAT(@TargetConversions, 'N0');
+PRINT 'Generando LeadConversions alineadas a PromptAds (clientes 400-1000 por campana)...';
 PRINT '';
 
-IF @TotalLeadsWithEvents = 0
-BEGIN
-    PRINT '  ⚠️  No hay LeadEvents. Ejecutar Step3 primero.';
-    GOTO SkipConversionGeneration;
-END
-
-DECLARE @TotalBatches INT = CEILING(CAST(@TotalLeadsWithEvents AS DECIMAL(18,2)) / @LeadsPerBatch);
+-- =============================================
+-- Limpieza defensiva de temp tables si el script fallo antes
+-- =============================================
+IF OBJECT_ID('tempdb..#PromptAdsMetrics') IS NOT NULL DROP TABLE #PromptAdsMetrics;
+IF OBJECT_ID('tempdb..#CampaignTargets') IS NOT NULL DROP TABLE #CampaignTargets;
+IF OBJECT_ID('tempdb..#PurchaseEvents') IS NOT NULL DROP TABLE #PurchaseEvents;
+IF OBJECT_ID('tempdb..#Conversions') IS NOT NULL DROP TABLE #Conversions;
+IF OBJECT_ID('tempdb..#InsertedConversions') IS NOT NULL DROP TABLE #InsertedConversions;
 
 -- =============================================
--- CARGAR CATÁLOGOS
+-- CONFIGURACION
 -- =============================================
-CREATE TABLE #ConversionTypes (
-    ConversionTypeId INT,
-    ConversionTypeName VARCHAR(60),
-    MinValue DECIMAL(18,4),
-    MaxValue DECIMAL(18,4)
-);
-
--- Tipos de conversión con rangos de valor
-INSERT INTO #ConversionTypes VALUES
-(1, 'PURCHASE', 50.00, 500.00),
-(2, 'SUBSCRIPTION', 10.00, 200.00),
-(3, 'TRIAL_SIGNUP', 5.00, 5.00),       -- Valor mínimo para NOT NULL
-(4, 'DEMO_REQUEST', 10.00, 10.00),     -- Valor mínimo para NOT NULL
-(5, 'QUOTE_REQUEST', 100.00, 5000.00),
-(6, 'CONTACT_FORM', 5.00, 5.00);       -- Valor mínimo para NOT NULL
-
--- Obtener currency USD (asumir USD = currencyId 1, o buscar)
+DECLARE @PurchaseConversionTypeId INT;
 DECLARE @USDCurrencyId INT;
+
+SELECT TOP 1 @PurchaseConversionTypeId = leadConversionTypeId
+FROM [crm].[LeadConversionTypes]
+WHERE leadConversionKey = 'PURCHASE' AND enabled = 1;
+IF @PurchaseConversionTypeId IS NULL SET @PurchaseConversionTypeId = 3;
+
 SELECT TOP 1 @USDCurrencyId = currencyId
 FROM [crm].[Currencies]
 WHERE currencyCode = 'USD' AND enabled = 1;
+IF @USDCurrencyId IS NULL SET @USDCurrencyId = 1;
 
-IF @USDCurrencyId IS NULL
-BEGIN
-    PRINT '  ⚠️  No se encontró currency USD habilitada. Usando currencyId = 1 por defecto.';
-    SET @USDCurrencyId = 1;
-END
-
-PRINT 'Catálogos cargados (Currency: ' + CAST(@USDCurrencyId AS VARCHAR(10)) + ')';
+PRINT '  - ConversionType PURCHASE=' + CAST(@PurchaseConversionTypeId AS VARCHAR(10)) + '  Currency USD=' + CAST(@USDCurrencyId AS VARCHAR(10));
 PRINT '';
 
 -- =============================================
--- IDENTIFICAR LEADS QUE CONVERTIRÁN
+-- Metricas PromptAds (revenue/impressions) via linked server
 -- =============================================
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT 'Identificando leads candidatos a conversión...';
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '';
+IF OBJECT_ID('tempdb..#PromptAdsMetrics') IS NOT NULL DROP TABLE #PromptAdsMetrics;
 
-CREATE TABLE #LeadsToConvert (
-    LeadId INT PRIMARY KEY,
-    LastEventId BIGINT NOT NULL,
-    LastEventDate DATETIME2,
-    HasConversionIntent BIT,
-    ConversionProbability DECIMAL(5,3)
+-- Crear la tabla primero para evitar errores "ya existe" cuando falla el SELECT INTO
+CREATE TABLE #PromptAdsMetrics (
+    CampaignId BIGINT NULL,
+    CampaignKey VARCHAR(255) NULL,
+    Revenue DECIMAL(18,2) NULL,
+    Impressions BIGINT NULL,
+    FirstMetricAt DATETIME2 NULL,
+    LastMetricAt DATETIME2 NULL
 );
 
--- Obtener todos los leads con eventos y su probabilidad de conversión
-INSERT INTO #LeadsToConvert (LeadId, LastEventId, LastEventDate, HasConversionIntent, ConversionProbability)
-SELECT
-    le.leadId,
-    (SELECT TOP 1 leadEventId
-     FROM [crm].[LeadEvents] le2
-     WHERE le2.leadId = le.leadId
-     ORDER BY le2.occurredAt DESC) AS LastEventId,
-    MAX(le.occurredAt) AS LastEventDate,
-    CASE
-        WHEN EXISTS (
-            SELECT 1
-            FROM [crm].[LeadEvents] le2
-            INNER JOIN [crm].[LeadEventTypes] let ON le2.leadEventTypeId = let.leadEventTypeId
-            WHERE le2.leadId = le.leadId
-              AND let.eventTypeName = 'CONVERSION_INTENT'
-        ) THEN 1
-        ELSE 0
-    END AS HasConversionIntent,
-    CASE
-        WHEN EXISTS (
-            SELECT 1
-            FROM [crm].[LeadEvents] le2
-            INNER JOIN [crm].[LeadEventTypes] let ON le2.leadEventTypeId = let.leadEventTypeId
-            WHERE le2.leadId = le.leadId
-              AND let.eventTypeName = 'CONVERSION_INTENT'
-        ) THEN 0.700  -- 70% si tiene intent
-        WHEN COUNT(*) >= 10 THEN 0.500  -- 50% si tiene 10+ eventos
-        WHEN COUNT(*) >= 5 THEN 0.350   -- 35% si tiene 5+ eventos
-        ELSE 0.250  -- 25% base
-    END AS ConversionProbability
-FROM [crm].[LeadEvents] le
-GROUP BY le.leadId;
-
-DECLARE @LeadsToConvertCount BIGINT = (SELECT COUNT(*) FROM #LeadsToConvert);
-PRINT '  ✓ ' + FORMAT(@LeadsToConvertCount, 'N0') + ' leads candidatos identificados';
-PRINT '';
-
--- =============================================
--- GENERAR CONVERSIONES
--- =============================================
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT 'Generando conversiones en batches...';
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '';
-
-DECLARE @LeadId INT;
-DECLARE @LastEventId BIGINT;
-DECLARE @LastEventDate DATETIME2;
-DECLARE @ConversionProb DECIMAL(5,3);
-DECLARE @NumConversions INT;
-DECLARE @ConversionNum INT;
-DECLARE @ConversionTypeId INT;
-DECLARE @ConversionValue DECIMAL(18,4);
-DECLARE @ConversionDate DATETIME2;
-DECLARE @MinValue DECIMAL(18,4);
-DECLARE @MaxValue DECIMAL(18,4);
-
-CREATE TABLE #BatchConversions (
-    LeadId INT NOT NULL,
-    LeadEventId BIGINT NOT NULL,
-    LeadConversionTypeId INT NOT NULL,
-    ConversionValue DECIMAL(18,4) NOT NULL,
-    CurrencyId INT NOT NULL,
-    OccurredAt DATETIME2 NOT NULL
-);
-
-WHILE @ProcessedLeads < @TotalLeadsWithEvents AND @GeneratedConversions < @TargetConversions
-BEGIN
-    SET @BatchStartTime = GETUTCDATE();
-
-    PRINT 'Batch ' + CAST(@CurrentBatch AS VARCHAR(5)) + ' - Procesando hasta ' + FORMAT(@LeadsPerBatch, 'N0') + ' leads...';
-
-    TRUNCATE TABLE #BatchConversions;
-
-    DECLARE lead_cursor CURSOR FAST_FORWARD FOR
-    SELECT TOP (@LeadsPerBatch)
-        LeadId, LastEventId, LastEventDate, ConversionProbability
-    FROM #LeadsToConvert
-    WHERE LeadId NOT IN (SELECT DISTINCT leadId FROM [crm].[LeadConversions])
-    ORDER BY ConversionProbability DESC, LeadId;
-
-    OPEN lead_cursor;
-    FETCH NEXT FROM lead_cursor INTO @LeadId, @LastEventId, @LastEventDate, @ConversionProb;
-
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        -- Decidir si este lead convierte basado en su probabilidad
-        IF RAND() < @ConversionProb
-        BEGIN
-            -- Decidir cuántas conversiones (1-3)
-            SET @NumConversions = CASE
-                WHEN RAND() < @MultipleConversionProb THEN 2 + ABS(CHECKSUM(NEWID()) % 2)
-                ELSE 1
-            END;
-
-            SET @ConversionNum = 1;
-            WHILE @ConversionNum <= @NumConversions
-            BEGIN
-                -- Seleccionar tipo de conversión aleatorio
-                SELECT TOP 1
-                    @ConversionTypeId = ConversionTypeId,
-                    @MinValue = MinValue,
-                    @MaxValue = MaxValue
-                FROM #ConversionTypes
-                ORDER BY NEWID();
-
-                -- Calcular valor aleatorio en el rango (NEVER NULL)
-                IF @MaxValue > @MinValue
-                    SET @ConversionValue = @MinValue + (RAND() * (@MaxValue - @MinValue));
-                ELSE
-                    SET @ConversionValue = @MinValue;
-
-                -- Fecha de conversión (1-90 días después del último evento)
-                DECLARE @DaysAfterLastEvent INT = 1 + ABS(CHECKSUM(NEWID()) % 90);
-                SET @ConversionDate = DATEADD(DAY, @DaysAfterLastEvent, @LastEventDate);
-
-                -- No permitir fechas futuras
-                IF @ConversionDate > GETUTCDATE()
-                    SET @ConversionDate = GETUTCDATE();
-
-                -- Insertar conversión con todos los campos NOT NULL completos
-                INSERT INTO #BatchConversions
-                    (LeadId, LeadEventId, LeadConversionTypeId, ConversionValue, CurrencyId, OccurredAt)
-                VALUES
-                    (@LeadId, @LastEventId, @ConversionTypeId, @ConversionValue, @USDCurrencyId, @ConversionDate);
-
-                SET @ConversionNum = @ConversionNum + 1;
-            END
-        END
-
-        SET @ProcessedLeads = @ProcessedLeads + 1;
-
-        -- Break si ya alcanzamos el target
-        IF @GeneratedConversions >= @TargetConversions
-            BREAK;
-
-        FETCH NEXT FROM lead_cursor INTO @LeadId, @LastEventId, @LastEventDate, @ConversionProb;
-    END
-
-    CLOSE lead_cursor;
-    DEALLOCATE lead_cursor;
-
-    -- INSERT MASIVO
-    INSERT INTO [crm].[LeadConversions] WITH (TABLOCK)
-        (leadId, leadEventId, leadConversionTypeId, conversionValue, currencyId, createdAt, updatedAt)
+BEGIN TRY
+    INSERT INTO #PromptAdsMetrics (CampaignId, CampaignKey, Revenue, Impressions, FirstMetricAt, LastMetricAt)
     SELECT
-        LeadId, LeadEventId, LeadConversionTypeId, ConversionValue, CurrencyId, OccurredAt, OccurredAt
-    FROM #BatchConversions;
+        pa.CampaignId,
+        'CAMP-' + CAST(pa.CampaignId AS VARCHAR(20)) AS CampaignKey,
+        SUM(ISNULL(pa.revenue,0)) AS Revenue,
+        SUM(ISNULL(pa.impressions,0)) AS Impressions,
+        MIN(pa.posttime) AS FirstMetricAt,
+        MAX(pa.posttime) AS LastMetricAt
+    FROM OPENQUERY([PromptAds_LinkedServer], '
+        SELECT c.CampaignId, amd.revenue, amd.impressions, amd.posttime
+        FROM PromptAds.dbo.Campaigns c
+        JOIN PromptAds.dbo.Ads a ON a.CampaignId = c.CampaignId
+        JOIN PromptAds.dbo.AdMetricsDaily amd ON amd.AdId = a.AdId
+    ') pa
+    GROUP BY pa.CampaignId;
+END TRY
+BEGIN CATCH
+    PRINT '  ERROR: No se pudo leer metricas de PromptAds: ' + ERROR_MESSAGE();
+    TRUNCATE TABLE #PromptAdsMetrics; -- deja la estructura vacía
+END CATCH
 
-    DECLARE @ConversionsInBatch BIGINT = @@ROWCOUNT;
-    SET @GeneratedConversions = @GeneratedConversions + @ConversionsInBatch;
+DECLARE @MetricsCount INT = (SELECT COUNT(*) FROM #PromptAdsMetrics);
+IF @MetricsCount = 0
+    PRINT '  WARN: Sin metricas PromptAds; se usaran valores por defecto.';
+ELSE
+    PRINT '  - Metricas PromptAds cargadas: ' + CAST(@MetricsCount AS VARCHAR(10)) + ' campanas';
+PRINT '';
 
-    SET @BatchSeconds = DATEDIFF(SECOND, @BatchStartTime, GETUTCDATE());
-    PRINT '  ✓ Batch completado en ' + CAST(@BatchSeconds AS VARCHAR(10)) + 's';
-    PRINT '    • Conversiones generadas: ' + FORMAT(@ConversionsInBatch, 'N0');
-    PRINT '    • Total acumulado: ' + FORMAT(@GeneratedConversions, 'N0') + ' conversiones';
-    PRINT '';
+-- =============================================
+-- Objetivos por campana (TargetClients 400-1000; TargetConversionValue=revenue)
+-- =============================================
+PRINT '>> Calculando objetivos de conversiones por campana...';
+IF OBJECT_ID('tempdb..#CampaignTargets') IS NOT NULL DROP TABLE #CampaignTargets;
 
-    SET @CurrentBatch = @CurrentBatch + 1;
+;WITH BaseTargets AS (
+    SELECT
+        c.CampaignKey,
+        ISNULL(m.Revenue, 84000.0) AS Revenue,
+        ISNULL(m.Impressions, 100000) AS Impressions,
+        CASE
+            WHEN ISNULL(m.Impressions,0) > 0 THEN
+                LEAST(300.0, GREATEST(80.0, ISNULL(m.Revenue,84000.0) / NULLIF(m.Impressions/100.0,0)))
+            ELSE 120.0
+        END AS AvgTicketEstimate
+    FROM (
+        SELECT DISTINCT campaignKey AS CampaignKey
+        FROM [crm].[LeadSources]
+    ) c
+    LEFT JOIN #PromptAdsMetrics m ON m.CampaignKey = c.CampaignKey
+)
+SELECT
+    CampaignKey,
+    Revenue,
+    Impressions,
+    CASE
+        WHEN CEILING(Revenue / NULLIF(AvgTicketEstimate,0)) < 400 THEN 400
+        WHEN CEILING(Revenue / NULLIF(AvgTicketEstimate,0)) > 1000 THEN 1000
+        ELSE CEILING(Revenue / NULLIF(AvgTicketEstimate,0))
+    END AS TargetClientsPre,
+    Revenue AS TargetConversionValue
+INTO #CampaignTargets
+FROM BaseTargets;
 
-    IF @GeneratedConversions >= @TargetConversions
-        BREAK;
+-- Escalar a total >= 500k clientes
+DECLARE @TotalClientsPre BIGINT = (SELECT SUM(TargetClientsPre) FROM #CampaignTargets);
+DECLARE @Scale DECIMAL(18,8) = CASE WHEN @TotalClientsPre < 500000 THEN 500000.0 / NULLIF(@TotalClientsPre,0) ELSE 1 END;
+
+UPDATE #CampaignTargets
+SET TargetClientsPre = CEILING(TargetClientsPre * @Scale);
+
+-- Reaplicar limites 400-1000
+UPDATE #CampaignTargets
+SET TargetClientsPre = CASE
+    WHEN TargetClientsPre < 400 THEN 400
+    WHEN TargetClientsPre > 1000 THEN 1000
+    ELSE TargetClientsPre
+END;
+
+DECLARE @TotalClientsTarget BIGINT = (SELECT SUM(TargetClientsPre) FROM #CampaignTargets);
+DECLARE @TotalRevenueTarget DECIMAL(18,2) = (SELECT SUM(TargetConversionValue) FROM #CampaignTargets);
+PRINT '  - Clientes objetivo total: ' + FORMAT(@TotalClientsTarget, 'N0') + ' (rango 400-1000)';
+PRINT '  - Revenue objetivo total: $' + FORMAT(@TotalRevenueTarget, 'N2');
+PRINT '';
+
+-- =============================================
+-- Seleccionar PURCHASE events (TODOS, no solo primeros N)
+-- =============================================
+PRINT '>> Seleccionando eventos PURCHASE existentes...';
+IF OBJECT_ID('tempdb..#PurchaseEvents') IS NOT NULL DROP TABLE #PurchaseEvents;
+
+-- Seleccionar TODOS los eventos PURCHASE para crear conversiones
+-- Nota: Cada PURCHASE crea una conversion, pero solo el 1er PURCHASE convierte al lead en cliente
+SELECT
+    le.leadEventId,
+    le.leadId,
+    le.campaignKey,
+    le.occurredAt
+INTO #PurchaseEvents
+FROM [crm].[LeadEvents] le
+INNER JOIN [crm].[LeadEventTypes] let ON le.leadEventTypeId = let.leadEventTypeId
+WHERE let.eventTypeKey = 'PURCHASE';
+
+DECLARE @AvailableConversions BIGINT = (SELECT COUNT(*) FROM #PurchaseEvents);
+DECLARE @UniqueLeadsWithPurchase BIGINT = (SELECT COUNT(DISTINCT leadId) FROM #PurchaseEvents);
+PRINT '  - Total eventos PURCHASE: ' + FORMAT(@AvailableConversions, 'N0');
+PRINT '  - Leads unicos con PURCHASE: ' + FORMAT(@UniqueLeadsWithPurchase, 'N0');
+PRINT '  - Promedio PURCHASE/lead: ' + CAST(CAST(@AvailableConversions AS DECIMAL(38,4)) / NULLIF(@UniqueLeadsWithPurchase,1) AS VARCHAR(128));
+PRINT '';
+
+IF @AvailableConversions = 0
+BEGIN
+    PRINT '  ERROR: No hay eventos PURCHASE para convertir. Ejecute Step 3 (Generate_events).';
+    GOTO SkipConversionGeneration;
 END
 
--- Cleanup
-DROP TABLE #BatchConversions;
-DROP TABLE #LeadsToConvert;
-DROP TABLE #ConversionTypes;
+-- =============================================
+-- Distribuir conversionValue para cuadrar revenue por campana
+-- =============================================
+PRINT '>> Distribuyendo conversionValue para alinear con revenue PromptAds...';
+IF OBJECT_ID('tempdb..#Conversions') IS NOT NULL DROP TABLE #Conversions;
+
+;WITH CampaignValue AS (
+    SELECT
+        ct.CampaignKey,
+        ct.TargetConversionValue,
+        ISNULL(pe.EventCount,0) AS EventCount
+    FROM #CampaignTargets ct
+    LEFT JOIN (
+        SELECT campaignKey, COUNT(*) AS EventCount
+        FROM #PurchaseEvents
+        GROUP BY campaignKey
+    ) pe ON pe.campaignKey = ct.CampaignKey
+)
+, ValuePerEvent AS (
+    SELECT
+        pv.CampaignKey,
+        pe.leadEventId,
+        pe.leadId,
+        pe.occurredAt,
+        pv.TargetConversionValue,
+        pv.EventCount,
+        CASE WHEN pv.EventCount > 1 THEN pv.TargetConversionValue / pv.EventCount ELSE pv.TargetConversionValue END AS BaseValue,
+        ROW_NUMBER() OVER (PARTITION BY pe.campaignKey ORDER BY pe.occurredAt, pe.leadEventId) AS rn
+    FROM #PurchaseEvents pe
+    JOIN CampaignValue pv ON pv.CampaignKey = pe.campaignKey
+)
+SELECT
+    CampaignKey,
+    leadEventId,
+    leadId,
+    occurredAt,
+    CASE
+        WHEN EventCount = 0 THEN 0
+        WHEN rn = EventCount THEN TargetConversionValue - BaseValue * (EventCount - 1)
+        ELSE BaseValue
+    END AS conversionValue
+INTO #Conversions
+FROM ValuePerEvent;
+
+DECLARE @TotalConv INT = (SELECT COUNT(*) FROM #Conversions);
+DECLARE @TotalConvValue DECIMAL(18,2) = (SELECT SUM(conversionValue) FROM #Conversions);
+PRINT '  - Conversiones planificadas: ' + FORMAT(@TotalConv, 'N0');
+PRINT '  - Valor total conversiones: $' + FORMAT(@TotalConvValue, 'N2');
+PRINT '';
+
+IF @TotalConv = 0
+BEGIN
+    PRINT '  ERROR: No hay conversiones para insertar.';
+    GOTO SkipConversionGeneration;
+END
+
+-- =============================================
+-- INSERTAR CONVERSIONES
+-- =============================================
+PRINT '>> Insertando conversiones en [crm].[LeadConversions]...';
+
+IF OBJECT_ID('tempdb..#InsertedConversions') IS NOT NULL DROP TABLE #InsertedConversions;
+CREATE TABLE #InsertedConversions (
+    leadConversionId BIGINT,
+    campaignKey VARCHAR(255),
+    leadId BIGINT,
+    leadEventId BIGINT,
+    conversionValue DECIMAL(18,2),
+    createdAt DATETIME2
+);
+
+INSERT INTO [crm].[LeadConversions] WITH (TABLOCK)
+    (leadConversionTypeId, leadId, leadEventId, currencyId, conversionValue, createdAt)
+OUTPUT inserted.leadConversionId, NULL, inserted.leadId, inserted.leadEventId, inserted.conversionValue, inserted.createdAt
+INTO #InsertedConversions (leadConversionId, campaignKey, leadId, leadEventId, conversionValue, createdAt)
+SELECT
+    @PurchaseConversionTypeId,
+    leadId,
+    leadEventId,
+    @USDCurrencyId,
+    conversionValue,
+    occurredAt
+FROM #Conversions c
+ORDER BY campaignKey, leadEventId;
+
+-- Update campaignKey in #InsertedConversions
+UPDATE ic
+SET ic.campaignKey = c.CampaignKey
+FROM #InsertedConversions ic
+JOIN #Conversions c ON c.leadEventId = ic.leadEventId;
+
+PRINT '  - Conversiones generadas: ' + FORMAT(@@ROWCOUNT, 'N0');
+
+PRINT '';
+PRINT 'Validacion por campana (target vs generado):';
+SELECT
+    ct.CampaignKey,
+    ct.TargetClientsPre AS TargetClients,
+    ct.TargetConversionValue AS TargetRevenue,
+    COUNT(*) AS Conversions,
+    COUNT(DISTINCT ic.leadId) AS DistinctClients,
+    SUM(ic.conversionValue) AS TotalConversionValue,
+    CASE WHEN COUNT(DISTINCT ic.leadId) < 400 OR COUNT(DISTINCT ic.leadId) > 1000 THEN 'WARN: clientes fuera de 400-1000' ELSE '' END AS ClientsFlag,
+    CASE WHEN ABS(ISNULL(SUM(ic.conversionValue),0) - ISNULL(ct.TargetConversionValue,0)) > 1.0 THEN 'WARN: revenue != target' ELSE '' END AS RevenueFlag
+FROM #CampaignTargets ct
+LEFT JOIN #InsertedConversions ic ON ic.campaignKey = ct.CampaignKey
+GROUP BY ct.CampaignKey, ct.TargetClientsPre, ct.TargetConversionValue
+ORDER BY ct.CampaignKey;
+
+DECLARE @TotalDistinctClients BIGINT = (SELECT COUNT(DISTINCT leadId) FROM #InsertedConversions);
+DECLARE @TotalRevenue DECIMAL(18,2) = (SELECT SUM(conversionValue) FROM #InsertedConversions);
+
+PRINT '';
+PRINT 'Totales conversiones:';
+PRINT '  Clientes distintos: ' + FORMAT(@TotalDistinctClients, 'N0');
+PRINT '  Ingreso total:     ' + FORMAT(@TotalRevenue, 'N2');
+
+-- =============================================
+-- Resumen por campana
+-- =============================================
+PRINT '';
+PRINT 'Resumen por campana:';
+SELECT
+    c.CampaignKey,
+    COUNT(*) AS Conversions,
+    SUM(lc.conversionValue) AS TotalConversionValue
+FROM [crm].[LeadConversions] lc
+JOIN #Conversions c ON c.leadEventId = lc.leadEventId
+GROUP BY c.CampaignKey
+ORDER BY c.CampaignKey;
 
 SkipConversionGeneration:
 
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '✓ GENERACIÓN DE LEAD CONVERSIONS COMPLETADA';
-PRINT '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-PRINT '';
-PRINT '  Total generado: ' + FORMAT(@GeneratedConversions, 'N0') + ' conversiones';
-PRINT '';
-
--- Estadísticas
-PRINT '  Distribución por tipo:';
-SELECT
-    lct.leadConversionName AS TipoConversion,
-    FORMAT(COUNT(*), 'N0') AS TotalConversiones,
-    FORMAT(AVG(lc.conversionValue), 'C2') AS ValorPromedio,
-    FORMAT(SUM(lc.conversionValue), 'C2') AS ValorTotal
-FROM [crm].[LeadConversions] lc
-INNER JOIN [crm].[LeadConversionTypes] lct ON lc.leadConversionTypeId = lct.leadConversionTypeId
-GROUP BY lct.leadConversionName
-ORDER BY COUNT(*) DESC;
+-- Cleanup: Dropear TODAS las tablas temporales creadas
+IF OBJECT_ID('tempdb..#PromptAdsMetrics') IS NOT NULL DROP TABLE #PromptAdsMetrics;
+IF OBJECT_ID('tempdb..#CampaignTargets') IS NOT NULL DROP TABLE #CampaignTargets;
+IF OBJECT_ID('tempdb..#PurchaseEvents') IS NOT NULL DROP TABLE #PurchaseEvents;
+IF OBJECT_ID('tempdb..#Conversions') IS NOT NULL DROP TABLE #Conversions;
+IF OBJECT_ID('tempdb..#InsertedConversions') IS NOT NULL DROP TABLE #InsertedConversions;
 
 PRINT '';
-
--- Leads únicos que convirtieron
-DECLARE @UniqueConvertedLeads BIGINT;
-SELECT @UniqueConvertedLeads = COUNT(DISTINCT leadId)
-FROM [crm].[LeadConversions];
-
-PRINT '  Leads únicos con conversión: ' + FORMAT(@UniqueConvertedLeads, 'N0');
-PRINT '';
+PRINT '=============================================';
+PRINT 'STEP 4 COMPLETADO';
+PRINT '=============================================';
+GO

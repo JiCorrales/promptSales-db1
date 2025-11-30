@@ -1108,7 +1108,7 @@ CREATE TABLE [crm].[ApiRequestResultStatuses] (
 GO
 
 CREATE TABLE [crm].[LeadDailyMetrics] (
-  [leadDailyMetricsId] bigint PRIMARY KEY NOT NULL IDENTITY(1, 1),
+  [leadDailyMetricId] bigint PRIMARY KEY NOT NULL IDENTITY(1, 1),
   [subscriberId] int NOT NULL,
   [newLeadsCount] int NOT NULL DEFAULT (0),
   [activeLeadsCount] int NOT NULL DEFAULT (0),
