@@ -17,7 +17,13 @@ spec:
     - from:
       - namespaceSelector:
           matchLabels:
-            app: promptsales
+            component: crm    # PromptCRM linked server
+      - namespaceSelector:
+          matchLabels:
+            component: central  # Postgres central if needed
+      - namespaceSelector:
+          matchLabels:
+            component: ads   # mismo dominio
       ports:
         - protocol: TCP
           port: 1433
@@ -46,3 +52,19 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+    # Permitir Redis cache
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: cache
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Permitir Mongo si se consume contenido
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: content
+      ports:
+        - protocol: TCP
+          port: 27017

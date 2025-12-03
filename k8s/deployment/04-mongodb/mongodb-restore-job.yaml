@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongodb-restore
+  namespace: mongo
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        tier: database
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mongo-restore
+          image: mongo:7.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: username
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: password
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "Buscando backup más reciente..."
+              LATEST=$(ls -1t /backups/mongodb-*.gz 2>/dev/null | head -n1 || true)
+              if [ -z "$LATEST" ]; then
+                echo "ERROR: No se encontró ningún backup en /backups"
+                echo "Archivos disponibles:"
+                ls -lh /backups || echo "El directorio /backups está vacío"
+                exit 1
+              fi
+              echo "Restaurando desde: $LATEST"
+              echo "Fecha del backup: $(stat -c %y "$LATEST" 2>/dev/null || stat -f "%Sm" "$LATEST")"
+
+              # Advertencia antes de restore
+              echo "ADVERTENCIA: Este proceso eliminará todos los datos actuales de MongoDB"
+              echo "Presione Ctrl+C en los próximos 5 segundos para cancelar..."
+              sleep 5
+
+              # Drop todas las bases de datos excepto admin, config, local
+              echo "Eliminando bases de datos existentes (excepto admin, config, local)..."
+              mongosh --host mongodb --username "$MONGO_USER" --password "$MONGO_PASSWORD" --authenticationDatabase admin --eval "
+                db.adminCommand('listDatabases').databases.forEach(function(d) {
+                  if (d.name != 'admin' && d.name != 'config' && d.name != 'local') {
+                    print('Dropping database: ' + d.name);
+                    db.getSiblingDB(d.name).dropDatabase();
+                  }
+                });
+              " || echo "Algunas bases de datos no pudieron ser eliminadas (puede ser normal)"
+
+              # Restaurar desde archivo
+              echo "Iniciando restore desde $LATEST..."
+              mongorestore \
+                --uri "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/admin" \
+                --gzip \
+                --archive="$LATEST" \
+                --drop
+
+              echo "Restore completado exitosamente!"
+              echo "Verificando datos restaurados..."
+              mongosh --host mongodb --username "$MONGO_USER" --password "$MONGO_PASSWORD" --authenticationDatabase admin --eval "
+                print('Bases de datos después del restore:');
+                db.adminCommand('listDatabases').databases.forEach(function(d) {
+                  print('  - ' + d.name + ': ' + (d.sizeOnDisk / 1024 / 1024).toFixed(2) + ' MB');
+                });
+              "
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backups
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: mongodb-backup

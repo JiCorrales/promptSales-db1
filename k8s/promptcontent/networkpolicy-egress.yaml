@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: promptcontent-egress-allow-all
+  name: promptcontent-egress-restricted
   namespace: promptcontent-dev
   labels:
     app: promptcontent
@@ -12,15 +12,35 @@ spec:
   policyTypes:
     - Egress
   egress:
+    # DNS
     - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # PostgreSQL (PromptSales central)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: central
       ports:
         - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
           port: 5432
+    # MongoDB (PromptContent)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: content
+      ports:
         - protocol: TCP
           port: 27017
+    # Redis cache (si se usa desde PromptContent)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              component: cache
+      ports:
+        - protocol: TCP
+          port: 6379

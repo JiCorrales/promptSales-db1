@@ -1,0 +1,105 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: promptads-restore
+  namespace: promptads
+  labels:
+    app: promptads
+    tier: database
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: promptads
+        tier: database
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sql-restore
+          image: mcr.microsoft.com/mssql-tools
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: promptads-secret
+                  key: SA_PASSWORD
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "Buscando backup más reciente de PromptAds..."
+              LATEST=$(ls -1t /backups/PromptAds-*.bak 2>/dev/null | head -n1 || true)
+              if [ -z "$LATEST" ]; then
+                echo "ERROR: No se encontró ningún backup .bak en /backups"
+                echo "Archivos disponibles:"
+                ls -lh /backups || echo "El directorio /backups está vacío"
+                exit 1
+              fi
+              echo "Restaurando desde: $LATEST"
+              echo "Fecha del backup: $(stat -c %y "$LATEST" 2>/dev/null || stat -f "%Sm" "$LATEST")"
+              echo "Tamaño del archivo: $(du -h "$LATEST" | cut -f1)"
+
+              # Advertencia antes de restore
+              echo "ADVERTENCIA: Este proceso eliminará la base de datos PromptAds actual"
+              echo "Presione Ctrl+C en los próximos 5 segundos para cancelar..."
+              sleep 5
+
+              # Verificar conexión a SQL Server
+              echo "Verificando conexión a SQL Server..."
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "SELECT @@VERSION" || {
+                echo "ERROR: No se puede conectar a SQL Server"
+                exit 1
+              }
+
+              # Obtener info de la base de datos actual
+              echo "Información de la base de datos antes del restore:"
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "SELECT name, state_desc, recovery_model_desc, create_date FROM sys.databases WHERE name='PromptAds'" -W || echo "La base de datos no existe aún"
+
+              # Cerrar conexiones activas y poner en modo SINGLE_USER
+              echo "Cerrando conexiones activas a PromptAds..."
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "
+              IF EXISTS (SELECT name FROM sys.databases WHERE name = 'PromptAds')
+              BEGIN
+                ALTER DATABASE [PromptAds] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+              END
+              " || echo "Base de datos no existe, continuando..."
+
+              # Restaurar desde backup
+              echo "Iniciando restore desde $LATEST..."
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "
+              RESTORE DATABASE [PromptAds]
+              FROM DISK='$LATEST'
+              WITH REPLACE, RECOVERY;
+              " || {
+                echo "ERROR: Restore falló"
+                # Intentar volver a MULTI_USER si falló
+                /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "ALTER DATABASE [PromptAds] SET MULTI_USER" || true
+                exit 1
+              }
+
+              # Volver a MULTI_USER
+              echo "Configurando base de datos en modo MULTI_USER..."
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "ALTER DATABASE [PromptAds] SET MULTI_USER"
+
+              # Verificar restore
+              echo "Restore completado exitosamente!"
+              echo "Verificando datos restaurados..."
+              /opt/mssql-tools18/bin/sqlcmd -S promptads,1433 -U sa -P "$SA_PASSWORD" -C -Q "
+              SELECT
+                name AS [Database],
+                state_desc AS [State],
+                recovery_model_desc AS [Recovery Model],
+                (SELECT COUNT(*) FROM [PromptAds].sys.tables WHERE type='U') AS [User Tables]
+              FROM sys.databases
+              WHERE name='PromptAds'
+              " -W
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backups
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: promptads-backup

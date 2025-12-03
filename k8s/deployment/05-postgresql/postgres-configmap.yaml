@@ -4,6 +4,5 @@ metadata:
   name: postgres
   namespace: promptcontent-dev
 data:
+  # Configuraciones no sensibles - Las credenciales están en postgres-secret
   POSTGRES_DB: "PromptContent"
-  POSTGRES_USER: "User"
-  POSTGRES_PASSWORD: "UserPassword123!"

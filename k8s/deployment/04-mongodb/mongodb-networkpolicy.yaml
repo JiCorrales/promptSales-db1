@@ -17,12 +17,15 @@ spec:
     - from:
       - namespaceSelector:
           matchLabels:
-            app: promptsales
+            component: content
+      - namespaceSelector:
+          matchLabels:
+            component: central
       ports:
         - protocol: TCP
           port: 27017
   egress:
-    # Permitir DNS
+    # DNS
     - to:
         - namespaceSelector:
             matchLabels:
@@ -30,7 +33,7 @@ spec:
       ports:
         - protocol: UDP
           port: 53
-    # Permitir comunicación con PostgreSQL (PromptSales)
+    # Postgres central (si ETL/servicios la consultan)
     - to:
         - namespaceSelector:
             matchLabels:

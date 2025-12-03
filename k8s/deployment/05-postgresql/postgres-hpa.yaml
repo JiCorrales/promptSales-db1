@@ -12,7 +12,7 @@ spec:
     kind: StatefulSet
     name: postgres
   minReplicas: 1
-  maxReplicas: 8
+  maxReplicas: 1  # Limitado a 1 hasta implementar PostgreSQL streaming replication
   metrics:
     - type: Resource
       resource:

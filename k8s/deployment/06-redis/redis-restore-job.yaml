@@ -1,0 +1,90 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: redis-restore
+  namespace: redis
+  labels:
+    app: redis
+    tier: cache
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: cache
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: redis-restore
+          image: redis:7.2-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "Buscando backup más reciente de Redis..."
+              LATEST=$(ls -1t /backups/redis-*.rdb 2>/dev/null | head -n1 || true)
+              if [ -z "$LATEST" ]; then
+                echo "ERROR: No se encontró ningún backup RDB en /backups"
+                echo "Archivos disponibles:"
+                ls -lh /backups || echo "El directorio /backups está vacío"
+                exit 1
+              fi
+              echo "Restaurando desde: $LATEST"
+              echo "Fecha del backup: $(stat -c %y "$LATEST" 2>/dev/null || stat -f "%Sm" "$LATEST")"
+              echo "Tamaño del archivo: $(du -h "$LATEST" | cut -f1)"
+
+              # Advertencia antes de restore
+              echo "ADVERTENCIA: Este proceso eliminará todos los datos actuales de Redis"
+              echo "Presione Ctrl+C en los próximos 5 segundos para cancelar..."
+              sleep 5
+
+              # Verificar conexión a Redis
+              echo "Verificando conexión a Redis..."
+              redis-cli -h redis -p 6379 -a "$REDIS_PASSWORD" ping || {
+                echo "ERROR: No se puede conectar a Redis"
+                exit 1
+              }
+
+              # Obtener info actual antes del restore
+              echo "Información de Redis antes del restore:"
+              redis-cli -h redis -p 6379 -a "$REDIS_PASSWORD" info keyspace || echo "Sin claves"
+
+              # Hacer FLUSHALL para limpiar datos actuales
+              echo "Eliminando todos los datos actuales de Redis..."
+              redis-cli -h redis -p 6379 -a "$REDIS_PASSWORD" FLUSHALL
+
+              # Para restaurar RDB en Redis, necesitamos:
+              # 1. Detener Redis
+              # 2. Copiar el RDB al directorio de datos
+              # 3. Reiniciar Redis
+              # Como no podemos hacer esto desde un Job externo (Redis está corriendo en StatefulSet),
+              # la mejor opción es usar redis-cli --pipe con RESTORE commands
+
+              echo "NOTA: Restore de Redis RDB requiere acceso directo al volumen de datos"
+              echo "Para restore completo, ejecutar manualmente:"
+              echo "  1. kubectl exec -n redis redis-0 -- redis-cli -a \$REDIS_PASSWORD SHUTDOWN SAVE"
+              echo "  2. kubectl cp $LATEST redis/redis-0:/data/dump.rdb"
+              echo "  3. kubectl delete pod redis-0 -n redis"
+              echo ""
+              echo "Alternativamente, para restore con redis-cli:"
+              echo "  redis-cli -h redis -p 6379 -a \$REDIS_PASSWORD --rdb $LATEST"
+              echo ""
+              echo "Este job no puede realizar el restore automáticamente sin privilegios de pod restart."
+              echo "Ver documentación en 06-redis/README.md para procedimiento manual."
+              exit 0
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backups
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: redis-backup

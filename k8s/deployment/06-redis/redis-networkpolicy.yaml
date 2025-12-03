@@ -15,15 +15,23 @@ spec:
     - Egress
   ingress:
     - from:
-      # Permitir desde todos los namespaces de PromptSales
       - namespaceSelector:
           matchLabels:
-            app: promptsales
+            component: crm
+      - namespaceSelector:
+          matchLabels:
+            component: ads
+      - namespaceSelector:
+          matchLabels:
+            component: content
+      - namespaceSelector:
+          matchLabels:
+            component: central
       ports:
         - protocol: TCP
           port: 6379
   egress:
-    # Permitir DNS
+    # DNS
     - to:
         - namespaceSelector:
             matchLabels:
@@ -31,7 +39,7 @@ spec:
       ports:
         - protocol: UDP
           port: 53
-    # Permitir comunicación entre replicas de Redis
+    # Comunicación entre pods Redis (future sentinel/cluster)
     - to:
         - podSelector:
             matchLabels:

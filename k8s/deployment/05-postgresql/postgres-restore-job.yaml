@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-restore
+  namespace: promptcontent-dev
+  labels:
+    app: postgres
+    tier: database
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+        tier: database
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: pg-restore
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              LATEST=$(ls -1t /backups/*.dump 2>/dev/null | head -n1 || true)
+              if [ -z "$LATEST" ]; then
+                echo "No backup file found in /backups"; exit 1
+              fi
+              echo "Restoring from $LATEST"
+              psql -h postgres -U "$POSTGRES_USER" -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$POSTGRES_DB' AND pid <> pg_backend_pid();"
+              dropdb -h postgres -U "$POSTGRES_USER" --if-exists "$POSTGRES_DB"
+              createdb -h postgres -U "$POSTGRES_USER" "$POSTGRES_DB"
+              pg_restore -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$LATEST"
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backups
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: postgres-backup
