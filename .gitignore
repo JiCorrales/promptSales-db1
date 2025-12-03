@@ -25,3 +25,5 @@ test-output/
 *.out
 DEPLOYMENT.md
 .gitignore
+mcp-servers/promptcontent/node_modules
+
