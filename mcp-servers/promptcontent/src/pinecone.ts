@@ -4,10 +4,12 @@ import { generateEmbedding } from "./embeddings"
 
 export async function semanticSearch(query: string) {
     try {
+        // Llamo las 
         const pineconeClient = getPinecone()
         const indexName = process.env.PINECONE_INDEX
         const embeddingDimensionRaw = process.env.EMBED_DIM
         const namespace = process.env.PINECONE_NAMESPACE || ""
+
         if (!indexName || !embeddingDimensionRaw) throw new Error("PINECONE_ENV_MISSING")
         console.log("[semanticSearch] start", { indexName, namespace })
 
