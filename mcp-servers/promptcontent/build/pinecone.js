@@ -3,8 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.semanticSearch = semanticSearch;
 const pinecone_util_1 = require("./pinecone-util");
 const embeddings_1 = require("./embeddings");
+// El parámetro 'query' es la cadena de texto para la cual se desea realizar la búsqueda semántica.
 async function semanticSearch(query) {
     try {
+        // Declarar variables de entorno necesarias.
         const pineconeClient = (0, pinecone_util_1.getPinecone)();
         const indexName = process.env.PINECONE_INDEX;
         const embeddingDimensionRaw = process.env.EMBED_DIM;

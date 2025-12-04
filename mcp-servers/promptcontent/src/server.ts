@@ -7,32 +7,42 @@
  */
 
 import dotenv from "dotenv"
-dotenv.config()
+import path from "path"
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") })
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
-import { MongoClient, Db, Int32, ObjectId } from "mongodb"
+import { Int32, ObjectId } from "mongodb"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { semanticSearch } from "./pinecone"
 import { searchTrack } from "./spotify"
 import OpenAI from "openai"
+import {
+    aiDeriveFilters,
+    fetchCampaignChannels,
+    fetchCampaignRows,
+    fetchCrmInsights,
+    fetchPromptAdsSnapshots,
+    fetchSalesSummaries,
+    formatLargeNumber,
+    formatPercent,
+    getPostgresClient
+} from "./campaignPerformance"
+import { randomUUID } from "crypto"
+import { getDb } from "./db"
+import { logAiRequest, logAiResponse } from "./aiLogs"
 
-let mongoClient: MongoClient | null = null
-let mongoDb: Db | null = null
-
-async function getDb() {
-    if (mongoDb) return mongoDb
-    const uri = process.env.MONGODB_URI
-    const dbName = process.env.MONGODB_DB
-    if (!uri || !dbName) throw new Error("MONGODB_ENV_MISSING")
-
-    mongoClient = await new MongoClient(uri).connect()
-    mongoDb = mongoClient.db(dbName)
-    try {
-        const imagesCol = mongoDb.collection("images")
-        await imagesCol.createIndex({ alt: "text" }, { name: "images_text_alt" })
-    } catch {}
-    return mongoDb
+const __stdioMode = process.env.RUN_AS_MCP_STDIO !== "0"
+if (__stdioMode) {
+    const toStr = (x: any) => {
+        if (typeof x === "string") return x
+        try { return JSON.stringify(x) } catch { return String(x) }
+    }
+    const logToErr = (...args: any[]) => {
+        try { process.stderr.write(args.map(toStr).join(" ") + "\n") } catch {}
+    }
+    console.log = logToErr
+    console.info = logToErr
 }
 
 function normalizeHashtag(t: string) {
@@ -61,8 +71,6 @@ function extractHashtags(text: string) {
     return unique.slice(0, 15).map(w => normalizeHashtag(w))
 }
 
-
-
 function parseSegmentsPayload(raw: string) {
     const fenced = (raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim()
     const start = fenced.indexOf("{")
@@ -81,22 +89,119 @@ function parseSegmentsPayload(raw: string) {
     return null
 }
 
-async function generateMessagesWithAI(descripcion: string, auds: any[]) {
+type AiRequestMeta = {
+    campaignRef?: string
+    segmentKey?: string
+}
+
+async function getAudienceWithAI(descripcion: string){
+    const key = process.env.OPENAI_API_KEY
+    if (!key) throw new Error("OPENAI_API_KEY_MISSING")
+    const client = new OpenAI({ apiKey: key })
+    const system = `Tarea general:
+A partir únicamente del texto recibido en el campo description, analiza la campaña y deduce todas las audiencias (públicos meta) mencionadas o implícitas.
+
+Instrucciones obligatorias:
+
+1. Lee y analiza la descripción completa.
+2. Interpreta todo exclusivamente desde ese texto.
+3. Identifica y clasifica automáticamente los públicos meta.
+4. Para cada audiencia detectada, deduce:
+
+- Rango de edad (explícito o inferido)
+- Género (si es posible)
+- Intereses
+- Ubicación (si existe)
+- Estilo de vida o comportamientos relevantes
+- Profesión u ocupación (si aplica)
+- Necesidades o dolores asociados
+- Objetivo de marketing que esta audiencia persigue o responde mejor
+- Tono ideal para comunicar
+- CTA más adecuado para esta audiencia
+
+5. Si la descripción sugiere múltiples segmentos, divídelos correctamente.
+6. No generes mensajes. Solo devuelve la descripción de cada audiencia y su metadata inferida.
+
+El output debe ser estrictamente en formato JSON.
+
+Formato exacto de salida:
+
+{
+  "targets": [
+    {
+      "audience": "Descripción detallada del público meta",
+      "ageRange": "Rango inferido",
+      "gender": "Género inferido o 'no determinado'",
+      "interests": ["...", "..."],
+      "location": "Ubicación inferida o 'no especificada'",
+      "lifestyle": "Estilo de vida o comportamiento",
+      "profession": "Profesión si se infiere",
+      "needs": ["Necesidad 1", "Necesidad 2"],
+      "objective": "Objetivo deducido",
+      "tone": "Tono deducido",
+      "cta": "CTA deducido"
+    }
+  ]
+}
+
+NO escribas nada fuera del JSON.
+NO incluyas explicaciones.`
+    const user = {
+        descripcion
+    }
+  const tries = [1, 2, 3]
+
+    for (const attempt of tries) {
+        const aiRequestId = randomUUID()
+        const attemptStart = new Date()
+        const requestStartMs = attemptStart.getTime()
+        const requestBody = {
+            attempt,
+            user,
+            system
+        }
+
+
+}
+
+async function generateMessagesWithAI(descripcion: string, auds: any[], meta: AiRequestMeta = {}) {
     const key = process.env.OPENAI_API_KEY
     if (!key) throw new Error("OPENAI_API_KEY_MISSING")
     const client = new OpenAI({ apiKey: key })
     const system = `
-Eres un generador de campañas de marketing.
-Devuelve SOLO un JSON válido, con esta forma exacta:
+Tarea general:
+A partir únicamente del texto recibido en el campo description, analiza la campaña, deduce toda la información necesaria y genera tres mensajes publicitarios por cada público meta identificado.
+Tarea general:
+Recibe un objeto JSON con audiencias ya procesadas, cada una con: audience, objective, tone y cta.
+A partir de esa información, genera exactamente tres mensajes de campaña publicitaria por cada segmento.
+
+Instrucciones obligatorias:
+
+1. Usa únicamente la información proporcionada dentro de cada audiencia.
+2. Cada mensaje debe ser:
+   - Claro y persuasivo
+   - Alineado al tono indicado
+   - Coherente con el objetivo deducido
+   - Adaptado al perfil de la audiencia
+   - Debe incluir explícitamente el CTA asignado
+3. Los mensajes deben ser 100% originales.
+4. No repitas frases entre mensajes ni entre audiencias.
+5. NO infieras nuevos públicos meta.
+6. NO cambies datos de las audiencias.
+7. Devuelve exactamente tres mensajes por audiencia.
+
+El output debe ser estrictamente en formato JSON.
+
+Formato exacto de salida:
 
 {
-  "segmentos": [
+  "results": [
     {
-      "nombre": "Awareness",
-      "mensajes": [
-        { "tipo": "awareness", "texto": "…"},
-        { "tipo": "consideration", "texto": "…"},
-        { "tipo": "conversion", "texto": "…"}
+      "audience": "Descripción del público meta",
+      "messages": [
+        "Mensaje 1",
+        "Mensaje 2",
+        "Mensaje 3"
       ]
     }
   ]
@@ -104,7 +209,8 @@ Devuelve SOLO un JSON válido, con esta forma exacta:
 
 NO escribas nada fuera del JSON.
 NO incluyas explicaciones.
-DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
+
+DEVUELVE exactamente 3 mensajes de campaA?as de marketing por segmento.
 `
 
     const user = {
@@ -115,6 +221,15 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
     const tries = [1, 2, 3]
 
     for (const attempt of tries) {
+        const aiRequestId = randomUUID()
+        const attemptStart = new Date()
+        const requestStartMs = attemptStart.getTime()
+        const requestBody = {
+            attempt,
+            user,
+            system
+        }
+
         try {
             const completion = await client.responses.create({
                 model: "o4-mini",
@@ -127,21 +242,87 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
             })
             const raw = completion.output_text
             const parsed = parseSegmentsPayload(raw)
-            if (!parsed) continue
-            if (!parsed.segmentos) continue
-            if (!Array.isArray(parsed.segmentos)) continue
-
-            const allGood = parsed.segmentos.every((seg: any) =>
+            const segments = parsed?.segmentos
+            const hasSegments = Array.isArray(segments)
+            const allGood = hasSegments && segments.every((seg: any) =>
                 Array.isArray(seg.mensajes) &&
                 seg.mensajes.length === 3 &&
                 seg.mensajes.every((m: any) =>
                     typeof m.texto === "string" && typeof m.tipo === "string"
                 )
             )
+            const responseStatus: "ok" | "partial" = allGood ? "ok" : "partial"
+            const latencyMs = Date.now() - requestStartMs
+            const traceId = typeof completion.id === "string" ? completion.id : null
+            const usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } = completion.usage ?? {}
+            const aiResponseId = await logAiResponse({
+                aiRequestId,
+                status: responseStatus,
+                latencyMS: latencyMs,
+                responseBody: { raw },
+                usageInputTokens: typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : null,
+                usageOutputTokens: typeof usage.completion_tokens === "number" ? usage.completion_tokens : null,
+                usageTotalTokens: typeof usage.total_tokens === "number" ? usage.total_tokens : null,
+                traceId
+            })
+            await logAiRequest({
+                aiRequestId,
+                createdAt: attemptStart,
+                completedAt: new Date(),
+                status: responseStatus === "ok" ? "completed" : "failed",
+                prompt: descripcion,
+                modality: "text",
+                modelProvider: "openai",
+                modelName: "o4-mini",
+                modelVersion: typeof completion.model === "string" ? completion.model : "o4-mini",
+                paramMaxTokens: 500,
+                requestBody,
+                responseRef: aiResponseId,
+                traceId,
+                byProcess: "promptcontent:createCampaignMessages",
+                campaignRef: meta.campaignRef ?? null,
+                segmentKey: meta.segmentKey ?? null,
+                context: {
+                    audiences: auds,
+                    attempt
+                }
+            })
 
-            if (allGood) return parsed.segmentos
-        } catch (e: any) {
-            if (e?.status === 429 || e?.code === "insufficient_quota") {
+            if (responseStatus === "ok" && hasSegments) {
+                return segments
+            }
+        } catch (error: any) {
+            const latencyMs = Date.now() - requestStartMs
+            const traceId = typeof error?.response?.id === "string" ? error.response.id : null
+            const aiResponseId = await logAiResponse({
+                aiRequestId,
+                status: "error",
+                latencyMS: latencyMs,
+                errorMessage: error?.message ?? "unknown",
+                traceId
+            })
+            await logAiRequest({
+                aiRequestId,
+                createdAt: attemptStart,
+                completedAt: new Date(),
+                status: "failed",
+                prompt: descripcion,
+                modality: "text",
+                modelProvider: "openai",
+                modelName: "o4-mini",
+                paramMaxTokens: 500,
+                requestBody,
+                responseRef: aiResponseId,
+                traceId,
+                byProcess: "promptcontent:createCampaignMessages",
+                campaignRef: meta.campaignRef ?? null,
+                segmentKey: meta.segmentKey ?? null,
+                context: {
+                    audiences: auds,
+                    attempt
+                }
+            })
+            if (error?.status === 429 || error?.code === "insufficient_quota") {
                 return []
             }
         }
@@ -149,6 +330,7 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
 
     return []
 }
+
 
 
 /**
@@ -176,7 +358,7 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
 //TODO: mejorar tipado de respuestas estructuradas
 export function createPromptContentServer() {
     const server = new McpServer({
-        name: "mcp-server-promptcontent",
+        name: "mcp-server",
         version: "1.0.0",
         capabilities: { tools: {} }
     })
@@ -228,9 +410,10 @@ export function createPromptContentServer() {
                 if (Array.isArray(idResults) && idResults.length > 0) {
                     const db = await getDb()
                     const imagesCol = db.collection("images")
-                    const ids = idResults.map((r: any) => r.id).filter(Boolean)
+                    const ids = idResults.map((r: any) => r.id).filter(Boolean) // Asegurarse de que el ID existe. Están como strings en Pinecone
                     console.log("[getContent] mongo.lookup.ids", ids)
-                    const objIds = ids.map((s: string) => new ObjectId(s))
+
+                    const objIds = ids.map((s: string) => new ObjectId(s)) // Convertir a ObjectId, porque en Pinecone se guardan como strings
                     const docs = await imagesCol.find({ _id: { $in: objIds } }).limit(5).toArray()
                     console.log("[getContent] mongo.docs", { count: docs.length })
                     images = docs.map((doc: any) => ({ url: doc.url, description: doc.alt, tags: doc.tags }))
@@ -299,28 +482,15 @@ export function createPromptContentServer() {
 
     // TOOL 3: createCampaign
     server.registerTool(
-        "createMarketingCampaign",
+        "createCampaignMessages",
         {
-            title: "Crear campaña de marketing",
-            description: "Crea una nueva campaña de mercadeo a partir de una descripción textual y un perfil de público meta. El tool debe almacenar la solicitud y generar una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información proporcionada sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado debe incluir: ID de la campaña creada, la solicitud original, el público objetivo, los tres mensajes generados, la bitácora que describe el razonamiento, ajustes y consideraciones creativas.",
+            title: "Crear mensajes para campaña de marketing",
+            description: "Crea tres mensajes para una campaña de mercadeo a partir de una descripción textual y un perfil de público meta. El tool debe almacenar la solicitud y generar una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información proporcionada sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado debe incluir: ID de la campaña creada, la solicitud original, el público objetivo, los tres mensajes generados, la bitácora que describe el razonamiento, ajustes y consideraciones creativas.",
             inputSchema: {
                 descripcion: z
                     .string()
                     .min(200)
-                    .describe("Descripción detallada de la campaña de mercadeo (mínimo 200 caracteres)"),
-                publico: z.array(
-                    z.object({
-                        edad: z
-                            .object({ min: z.number().int().min(13), max: z.number().int().max(100) })
-                            .optional(),
-                        intereses: z.array(z.string()).optional(),
-                        ubicaciones: z.array(z.string()).optional(),
-                        genero: z.enum(["masculino", "femenino", "mixto"]).optional()
-
-                    })
-                    .describe("Definición del público objetivo")),
-                duracion: z.enum(["1 semana", "2 semanas", "1 mes", "3 meses"]).optional(),
-                presupuesto: z.number().int().min(100).optional()
+                    .describe("Descripción detallada de la campaña de mercadeo (mínimo 200 caracteres)")
             },
             outputSchema: {
 
@@ -379,60 +549,71 @@ export function createPromptContentServer() {
          * @returns {Promise<{ content: { type: string; text: string }[]; structuredContent: any }>}
          *          Respuesta MCP con la campaña generada.
          */
-        async ({ descripcion, publico, duracion, presupuesto }) => {
-            const id = `campaign_${Date.now()}`
-            const auds = Array.isArray(publico) ? publico : [publico]
-            const segmentsAll: any[] = []
-            for (const [idx, aud] of auds.entries()) {
-                const segs = await generateMessagesWithAI(descripcion, [aud])
-                if (!Array.isArray(segs) || segs.length === 0) throw new Error("ai_failed")
-                const chosen = segs[0]
-                const msgs = Array.isArray(chosen.mensajes) ? chosen.mensajes.slice(0, 3) : []
-                if (msgs.length !== 3) throw new Error("ai_failed_incomplete_messages")
-                segmentsAll.push({
-                    ...chosen,
-                    nombre: chosen.nombre || `Audiencia ${idx + 1}`,
-                    mensajes: msgs,
-                    audienceIndex: idx
+        async ({ descripcion }) => {
+            const campaignId = `campaign_${Date.now()}`
+            //TODO: Return the audience profiles with AI before generatingMessagesWithAI
+            const audienceProfiles = Array.isArray(publico) ? publico : [publico]
+            const generatedSegments: any[] = []
+
+            for (const [audienceIndex, singleAudience] of audienceProfiles.entries()) {
+                const aiSegments = await generateMessagesWithAI(descripcion, [singleAudience], {
+                    campaignRef: campaignId,
+                    segmentKey: `audience_${audienceIndex + 1}`
+                })
+                if (!Array.isArray(aiSegments) || aiSegments.length === 0) throw new Error("ai_failed")
+
+                const selectedSegment = aiSegments[0]
+                const campaignMessages = Array.isArray(selectedSegment.mensajes) ? selectedSegment.mensajes.slice(0, 3) : []
+                if (campaignMessages.length !== 3) throw new Error("ai_failed_incomplete_messages")
+
+                generatedSegments.push({
+                    ...selectedSegment,
+                    nombre: selectedSegment.nombre || `Audiencia ${audienceIndex + 1}`,
+                    mensajes: campaignMessages,
+                    audienceIndex
                 })
             }
-            const segmentos = segmentsAll
-            const createdAt = new Date()
-            const messages = segmentos.flatMap((seg: any) =>
-                (seg.mensajes).map((m: any) => ({
+
+            const campaignSegments = generatedSegments
+            const campaignCreatedAt = new Date()
+
+            const campaignMessages = campaignSegments.flatMap((segment: any) =>
+                segment.mensajes.map((message: any) => ({
                     ts: new Date(),
-                    text: `[Audiencia ${seg.audienceIndex + 1} - ${seg.nombre}] ${m.tipo}: ${m.texto}`,
+                    text: `[Audiencia ${segment.audienceIndex + 1} - ${segment.nombre}] ${message.tipo}: ${message.texto}`,
                     role: "assistant"
                 }))
             )
-            const messageCountNum = messages.length
-            const messageCount = new Int32(messageCountNum)
-            const lastMessageTs = messageCountNum ? messages[messageCountNum - 1].ts : createdAt
-            let insertedIdStr: string | undefined
-            const audienceStr = auds.map((a: any, i: number) => {
-                const age = a.edad ? `${a.edad.min ?? ""}-${a.edad.max ?? ""}` : ""
-                const ints = Array.isArray(a.intereses) ? a.intereses.join(",") : ""
-                const locs = Array.isArray(a.ubicaciones) ? a.ubicaciones.join(",") : ""
-                return `#${i + 1}:${age}|${ints}|${locs}|${a.genero || ""}`.trim()
+
+            const totalMessageCount = campaignMessages.length
+            const messageCountInt32 = new Int32(totalMessageCount)
+            const lastMessageTimestamp = totalMessageCount ? campaignMessages[totalMessageCount - 1].ts : campaignCreatedAt
+
+            let insertedMongoId: string | undefined
+
+            const audienceDescription = audienceProfiles.map((audience: any, index: number) => {
+                const ageRange = audience.edad ? `${audience.edad.min ?? ""}-${audience.edad.max ?? ""}` : ""
+                const interestsList = Array.isArray(audience.intereses) ? audience.intereses.join(",") : ""
+                const locationsList = Array.isArray(audience.ubicaciones) ? audience.ubicaciones.join(",") : ""
+                return `#${index + 1}:${ageRange}|${interestsList}|${locationsList}|${audience.genero || ""}`.trim()
             }).join(" || ")
 
             try {
-                const db = await getDb()
-                const ins = await db.collection("CampaignLogs").insertOne({
-                    logId: id,
-                    campaignRef: id,
-                    audience: audienceStr,
-                    messages,
-                    messageCount,
-                    lastMessageTs,
-                    
-                    createdAt
+                const database = await getDb()
+                const campaignLogInsert = await database.collection("CampaignLogs").insertOne({
+                    logId: campaignId,
+                    campaignRef: campaignId,
+                    audience: audienceDescription,
+                    messages: campaignMessages,
+                    messageCount: messageCountInt32,
+                    lastMessageTs: lastMessageTimestamp,
+                    createdAt: campaignCreatedAt
                 })
-                insertedIdStr = ins?.insertedId ? String(ins.insertedId) : undefined
+                insertedMongoId = campaignLogInsert?.insertedId ? String(campaignLogInsert.insertedId) : undefined
 
-                await db.collection("AIRequests").insertOne({
-                    aiRequestId: id,
-                    createdAt,
+                await database.collection("AIRequests").insertOne({
+                    aiRequestId: campaignId,
+                    createdAt: campaignCreatedAt,
                     completedAt: new Date(),
                     status: "completed",
                     modality: "text",
@@ -440,32 +621,219 @@ export function createPromptContentServer() {
                     context: {
                         type: "text",
                         language: "es",
-                        campaignRef: id
+                        campaignRef: campaignId
                     },
-                    requestBody: { audiencias: auds },
+                    requestBody: { audiencias: audienceProfiles },
                     mcp: { serverKey: "mcp-server-promptcontent", tool: "generateCampaignMessages" }
                 })
-            } catch (e) {
-                console.error("CampaignLogs/AIRequests persistence error", e)
+            } catch (persistError) {
+                console.error("CampaignLogs/AIRequests persistence error", persistError)
             }
 
-            const output = {
-                _id: insertedIdStr,
-                logId: id,
-                campaignRef: id,
-                audience: auds.map((a: any) => ({
-                    edad: a.edad || null,
-                    intereses: a.intereses || [],
-                    ubicaciones: a.ubicaciones || [],
-                    genero: a.genero || null,
-                    nivelSocioeconomico: a.nivelSocioeconomico || null
+            const responsePayload = {
+                _id: insertedMongoId,
+                logId: campaignId,
+                campaignRef: campaignId,
+                audience: audienceProfiles.map((audience: any) => ({
+                    edad: audience.edad || null,
+                    intereses: audience.intereses || [],
+                    ubicaciones: audience.ubicaciones || [],
+                    genero: audience.genero || null,
+                    nivelSocioeconomico: audience.nivelSocioeconomico || null
                 })),
-                messages: messages.map((m: { role: string; text: string; ts: Date }) => ({ role: m.role, text: m.text, ts: (m.ts as Date).toISOString() })),
-                messageCount: messageCountNum,
-                lastMessageTs: lastMessageTs.toISOString(),
-                createdAt: createdAt.toISOString()
+                messages: campaignMessages.map((message: { role: string; text: string; ts: Date }) => ({
+                    role: message.role,
+                    text: message.text,
+                    ts: (message.ts as Date).toISOString()
+                })),
+                messageCount: totalMessageCount,
+                lastMessageTs: lastMessageTimestamp.toISOString(),
+                createdAt: campaignCreatedAt.toISOString()
             }
-            return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output }
+
+            return {
+                content: [{ type: "text", text: JSON.stringify(responsePayload) }],
+                structuredContent: responsePayload
+            }
+        }
+    )
+
+    // TOOL 4: queryCampaignPerformance
+    server.registerTool(
+        "queryCampaignPerformance",
+        {
+            title: "Consultar rendimiento de campañas",
+            description:
+               "Permite preguntar en lenguaje natural por el alcance, éxito, ventas, reacciones y canales usados en campañas consolidadas. El handler cruza datos de PromptAdsSnapshots, CampaignChannels, salesSummary, Campaigns, Interactions, Calculations y PromptCrmSnapshots para materializar el alcance real, tasas de conversión/engagement/ROI, ventas netas, desglose de reacciones, canales o mercados y el estado de los leads asociados. Retorna este conjunto de métricas principales, fuentes ads/CRM, tasas clave y detalles por campaña listos para que la IA los exponga o explique sin inventar cifras.",
+            inputSchema: {
+                question: z
+                    .string()
+                    .min(10)
+                    .describe("Pregunta en lenguaje natural sobre una o varias campañas.")
+            },
+            outputSchema: {
+                question: z.string(),
+                summary: z.string(),
+                campaigns: z.array(
+                    z.object({
+                        campaignId: z.number(),
+                        campaignName: z.string().nullable(),
+                        status: z.string().nullable(),
+                        companyName: z.string().nullable(),
+                        startDate: z.string().nullable(),
+                        endDate: z.string().nullable(),
+                        snapshotDate: z.string().nullable(),
+                        budgetAmount: z.number().nullable(),
+                        reach: z.number().nullable(),
+                        impressions: z.number().nullable(),
+                        clicks: z.number().nullable(),
+                        interactions: z.number().nullable(),
+                        hoursViewed: z.number().nullable(),
+                        cost: z.number().nullable(),
+                        revenue: z.number().nullable(),
+                        conversionRate: z.number().nullable(),
+                        engagementRate: z.number().nullable(),
+                        roi: z.number().nullable(),
+                        totalSpent: z.number().nullable(),
+                        totalRevenue: z.number().nullable(),
+                        orders: z.number().nullable(),
+                        salesAmount: z.number().nullable(),
+                        returnsAmount: z.number().nullable(),
+                        adsRevenue: z.number().nullable(),
+                        currencyId: z.number().nullable(),
+                        usersReached: z.number().nullable(),
+                        interactionsBreakdown: z.object({
+                            clicks: z.number().nullable(),
+                            likes: z.number().nullable(),
+                            comments: z.number().nullable(),
+                            reactions: z.number().nullable(),
+                            shares: z.number().nullable()
+                        }),
+                        channels: z.array(z.string()),
+                        targetMarkets: z.array(z.string()),
+                        crm: z.object({
+                            totalLeads: z.number(),
+                            conversionEvents: z.number(),
+                            leadStatusCounts: z.record(z.number()),
+                            channelNames: z.array(z.string())
+                        })
+                    })
+                )
+            }
+        },
+        async ({ question }) => {
+            const sanitizedQuestion = question.trim()
+            try {
+                const client = await getPostgresClient()
+                const filters = await aiDeriveFilters(sanitizedQuestion)
+                const safeLimit = 3
+                const campaigns = await fetchCampaignRows(client, filters, safeLimit)
+                if (campaigns.length === 0) {
+                    const empty = {
+                        question: sanitizedQuestion,
+                        summary: `No se encontraron campañas para la consulta: "${sanitizedQuestion}".`,
+                        campaigns: []
+                    }
+                    return {
+                        content: [{ type: "text", text: JSON.stringify(empty) }],
+                        structuredContent: empty
+                    }
+                }
+                const campaignIds = campaigns.map(row => row.campaignId)
+                const snapshots = await fetchPromptAdsSnapshots(client, campaignIds)
+                const channelMap = await fetchCampaignChannels(client, campaignIds)
+                const salesMap = await fetchSalesSummaries(client, campaignIds)
+                const { summaryMap, statusMap } = await fetchCrmInsights(client, campaignIds)
+                const finalCampaigns = campaigns.map(row => {
+                    const snapshot = snapshots.get(row.campaignId)
+                    const sales = salesMap.get(row.campaignId)
+                    const channelCandidates = [
+                        ...(snapshot?.snapshotChannels ?? []),
+                        ...(channelMap.get(row.campaignId) ?? [])
+                    ]
+                    const combinedChannels = Array.from(new Set(channelCandidates.filter(Boolean)))
+                    const targetMarkets = Array.from(new Set(snapshot?.snapshotMarkets ?? [])).filter(Boolean)
+                    const crmSummary = summaryMap.get(row.campaignId)
+                    const leadStatusCounts = statusMap.get(row.campaignId) ?? {}
+                    return {
+                        campaignId: row.campaignId,
+                        campaignName: row.campaignName,
+                        status: row.status,
+                        companyName: snapshot?.companyName ?? row.companyName,
+                        startDate: row.startDate,
+                        endDate: row.endDate,
+                        snapshotDate: snapshot?.snapshotDate ?? null,
+                        budgetAmount: row.budgetAmount ?? snapshot?.campaignBudget ?? null,
+                        reach: snapshot?.totalReach ?? null,
+                        impressions: snapshot?.totalImpressions ?? null,
+                        clicks: snapshot?.totalClicks ?? null,
+                        interactions: snapshot?.totalInteractions ?? null,
+                        hoursViewed: snapshot?.totalHoursViewed ?? null,
+                        cost: snapshot?.totalCost ?? null,
+                        revenue: snapshot?.totalRevenue ?? null,
+                        conversionRate: row.conversionRate,
+                        engagementRate: row.engagementRate,
+                        roi: row.roi,
+                        totalSpent: row.totalSpent,
+                        totalRevenue: row.calcTotalRevenue,
+                        orders: sales?.orders ?? null,
+                        salesAmount: sales?.salesAmount ?? null,
+                        returnsAmount: sales?.returnsAmount ?? null,
+                        adsRevenue: sales?.adsRevenue ?? snapshot?.totalRevenue ?? null,
+                        currencyId: sales?.currencyId ?? null,
+                        usersReached: row.interactions.usersReached,
+                        interactionsBreakdown: {
+                            clicks: row.interactions.clicks,
+                            likes: row.interactions.likes,
+                            comments: row.interactions.comments,
+                            reactions: row.interactions.reactions,
+                            shares: row.interactions.shares
+                        },
+                        channels: combinedChannels,
+                        targetMarkets,
+                        crm: {
+                            totalLeads: crmSummary?.totalLeads ?? 0,
+                            conversionEvents: crmSummary?.conversionEvents ?? 0,
+                            leadStatusCounts,
+                            channelNames: crmSummary?.channelNames ?? []
+                        }
+                    }
+                })
+                const summaryParts = [
+                    `Pregunta: "${sanitizedQuestion}".`,
+                    `Se analizaron ${finalCampaigns.length} campaña(s) relevantes.`
+                ]
+                const highlighted = finalCampaigns[0]
+                if (highlighted) {
+                    summaryParts.push(
+                        `La campaña ${highlighted.campaignName ?? highlighted.campaignId} reportó alcance ${formatLargeNumber(
+                            highlighted.reach
+                        )}, tasa de éxito ${formatPercent(highlighted.conversionRate)}, ventas estimadas ${formatLargeNumber(
+                            highlighted.salesAmount
+                        )}.`
+                    )
+                }
+                const output = {
+                    question: sanitizedQuestion,
+                    summary: summaryParts.join(" "),
+                    campaigns: finalCampaigns
+                }
+                return {
+                    content: [{ type: "text", text: JSON.stringify(output) }],
+                    structuredContent: output
+                }
+            } catch (error: any) {
+                console.error("[queryCampaignPerformance] error", error)
+                const failed = {
+                    question: sanitizedQuestion,
+                    summary: `No fue posible responder la consulta (${error?.message || "error desconocido"}).`,
+                    campaigns: []
+                }
+                return {
+                    content: [{ type: "text", text: JSON.stringify(failed) }],
+                    structuredContent: failed
+                }
+            }
         }
     )
 
