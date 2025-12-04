@@ -1,10 +1,10 @@
 import { getPinecone } from "./pinecone-util"
 import { generateEmbedding } from "./embeddings"
 
-
+// El parámetro 'query' es la cadena de texto para la cual se desea realizar la búsqueda semántica.
 export async function semanticSearch(query: string) {
     try {
-        // Llamo las 
+        // Declarar variables de entorno necesarias.
         const pineconeClient = getPinecone()
         const indexName = process.env.PINECONE_INDEX
         const embeddingDimensionRaw = process.env.EMBED_DIM

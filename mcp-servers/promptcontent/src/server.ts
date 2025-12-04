@@ -425,6 +425,7 @@ export function createPromptContentServer() {
                     messages,
                     messageCount,
                     lastMessageTs,
+                    
                     createdAt
                 })
                 insertedIdStr = ins?.insertedId ? String(ins.insertedId) : undefined
