@@ -176,7 +176,7 @@ if ($LASTEXITCODE -eq 0) {
 # ============================================
 # 4. Desplegar PromptAds (SQL Server)
 # ============================================
-Write-Host "`n[4/8] 📢 Desplegando PromptAds (SQL Server)..." -ForegroundColor Cyan
+Write-Host "`n[4/8] Desplegando PromptAds (SQL Server)..." -ForegroundColor Cyan
 
 Write-Host "   → Aplicando manifiestos..." -ForegroundColor Gray
 kubectl apply -f 03-promptads/
@@ -223,7 +223,7 @@ if ($LASTEXITCODE -eq 0) {
 # ============================================
 Write-Host "`n[7/8] 🔴 Desplegando Redis..." -ForegroundColor Cyan
 
-Write-Host "   → Aplicando manifiestos..." -ForegroundColor Gray
+Write-Host "Aplicando manifiestos..." -ForegroundColor Gray
 kubectl apply -f 06-redis/
 
 if ($LASTEXITCODE -eq 0) {
@@ -238,48 +238,47 @@ if ($LASTEXITCODE -eq 0) {
 # ============================================
 Write-Host "`n[8/8] 🔍 Verificando deployment completo..." -ForegroundColor Cyan
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "Estado de todos los Pods:" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get pods --all-namespaces | Select-String -Pattern "promptcrm|promptads|mongo|redis|postgres"
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "Estado de todos los Services:" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get svc --all-namespaces | Select-String -Pattern "promptcrm|promptads|mongo|redis|postgres"
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "Estado de todos los PVCs:" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get pvc --all-namespaces
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "Estado de HPAs (Autoescalado):" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get hpa --all-namespaces
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "Estado de PDBs (Alta Disponibilidad):" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get pdb --all-namespaces
 
-Write-Host "`n═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "`n-------------------------------------------" -ForegroundColor Gray
 Write-Host "NetworkPolicies (Seguridad):" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════" -ForegroundColor Gray
+Write-Host "-------------------------------------------" -ForegroundColor Gray
 kubectl get networkpolicies --all-namespaces
 
 # ============================================
 # Resumen Final
 # ============================================
 Write-Host @"
-
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║               ✅ DEPLOYMENT COMPLETADO                    ║
-║                    Versión 2.0                            ║
-║    con HPA, PDB, Anti-affinity, NetworkPolicies          ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
++---------------------------------------------------------+
+|                                                         |
+|              ✅ DEPLOYMENT COMPLETADO                    |
+|                     Versión 2.0                         |
+|     con HPA, PDB, Anti-affinity, NetworkPolicies        |
+|                                                         |
++---------------------------------------------------------+
 
 Bases de Datos Desplegadas:
    - PromptCRM    (SQL Server 2022) - namespace: promptcrm    [1-10 replicas HPA]
