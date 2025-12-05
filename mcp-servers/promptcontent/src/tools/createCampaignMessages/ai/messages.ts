@@ -8,72 +8,66 @@ export type AiRequestMeta = {
     segmentKey?: string
 }
 
+type MessageSegment = { mensajes: { tipo: string; texto: string }[]; nombre?: string }
+
+function toSegmentsFromResults(parsed: any): MessageSegment[] | null {
+    const results = Array.isArray(parsed?.results) ? parsed.results : null
+    if (!results || results.length === 0) return null
+    return results.map((item: any, idx: number) => {
+        const messages = Array.isArray(item.messages) ? item.messages.slice(0, 3) : []
+        const mapped = messages.map((text: any, i: number) => ({
+            tipo: ["awareness", "consideration", "conversion"][i] ?? "mensaje",
+            texto: typeof text === "string" ? text : ""
+        }))
+        return { nombre: item.audience || `Segmento ${idx + 1}`, mensajes: mapped }
+    })
+}
+
+function fallbackSegments(auds: any[]): MessageSegment[] {
+    return auds.map((aud, idx) => {
+        const name = aud?.audience || `Audiencia ${idx + 1}`
+        const tone = aud?.tone || "informativo"
+        const cta = aud?.cta || "Descarga ahora"
+        const objective = aud?.objective || "generar interés"
+        const base = (phase: string) =>
+            `${phase}: ${name}. Objetivo: ${objective}. Tono: ${tone}. CTA: ${cta}.`
+        return {
+            nombre: name,
+            mensajes: [
+                { tipo: "awareness", texto: base("Descubre") },
+                { tipo: "consideration", texto: base("Prueba") },
+                { tipo: "conversion", texto: base("Actúa") }
+            ]
+        }
+    })
+}
+
 export async function generateMessagesWithAI(descripcion: string, auds: any[], meta: AiRequestMeta = {}) {
     const key = process.env.OPENAI_API_KEY
     if (!key) throw new Error("OPENAI_API_KEY_MISSING")
 
     const client = new OpenAI({ apiKey: key })
     const system = `
-Tarea general:
-A partir únicamente del texto recibido en el campo description, analiza la campaña, deduce toda la información necesaria y genera tres mensajes publicitarios por cada público meta identificado.
-Tarea general:
-Recibe un objeto JSON con audiencias ya procesadas, cada una con: audience, objective, tone y cta.
-A partir de esa información, genera exactamente tres mensajes de campaña publicitaria por cada segmento.
+Recibe una descripción de campaña y audiencias ya procesadas (audience, objective, tone, cta).
+Genera exactamente tres mensajes de campaña por cada audiencia.
 
-Instrucciones obligatorias:
-
-1. Usa únicamente la información proporcionada dentro de cada audiencia.
-2. Cada mensaje debe ser:
-   - Claro y persuasivo
-   - Alineado al tono indicado
-   - Coherente con el objetivo deducido
-   - Adaptado al perfil de la audiencia
-   - Debe incluir explícitamente el CTA asignado
-3. Los mensajes deben ser 100% originales.
-4. No repitas frases entre mensajes ni entre audiencias.
-5. NO infieras nuevos públicos meta.
-6. NO cambies datos de las audiencias.
-7. Devuelve exactamente tres mensajes por audiencia.
-
-El output debe ser estrictamente en formato JSON.
-
-Formato exacto de salida:
-
+Formato requerido:
 {
   "results": [
-    {
-      "audience": "Descripción del público meta",
-      "messages": [
-        "Mensaje 1",
-        "Mensaje 2",
-        "Mensaje 3"
-      ]
-    }
+    { "audience": "Descripción", "messages": ["Mensaje 1", "Mensaje 2", "Mensaje 3"] }
   ]
 }
 
-NO escribas nada fuera del JSON.
-NO incluyas explicaciones.
+No agregues texto fuera del JSON.`
 
-DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
-`
-
-    const user = {
-        descripcion,
-        audiencia: auds
-    }
-
+    const user = { descripcion, audiencia: auds }
     const tries = [1, 2, 3]
 
     for (const attempt of tries) {
         const aiRequestId = randomUUID()
         const attemptStart = new Date()
         const requestStartMs = attemptStart.getTime()
-        const requestBody = {
-            attempt,
-            user,
-            system
-        }
+        const requestBody = { attempt, user, system }
 
         try {
             const completion = await client.responses.create({
@@ -86,17 +80,19 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
                 max_output_tokens: 500
             })
             const raw = completion.output_text
-            const parsed = parseSegmentsPayload(raw) 
-            const segments = parsed?.segmentos
-            const hasSegments = Array.isArray(segments)
-            const allGood = hasSegments && segments.every((seg: any) =>
-                Array.isArray(seg.mensajes) &&
-                seg.mensajes.length === 3 &&
-                seg.mensajes.every((m: any) =>
-                    typeof m.texto === "string" && typeof m.tipo === "string"
+            const parsed = parseSegmentsPayload(raw)
+            const fromSegmentos = Array.isArray(parsed?.segmentos) ? parsed.segmentos : null
+            const fromResults = toSegmentsFromResults(parsed)
+            const segments: MessageSegment[] | null = fromSegmentos || fromResults
+            const hasSegments = Array.isArray(segments) && segments.length > 0
+            const allGood =
+                hasSegments &&
+                segments!.every(seg =>
+                    Array.isArray(seg.mensajes) &&
+                    seg.mensajes.length === 3 &&
+                    seg.mensajes.every(m => typeof m.texto === "string" && typeof m.tipo === "string")
                 )
-            )
-            const responseStatus: "ok" | "partial" = allGood ? "ok" : "partial"
+            const responseStatus: "ok" | "partial" = allGood ? "ok" : hasSegments ? "partial" : "partial"
             const latencyMs = Date.now() - requestStartMs
             const traceId = typeof completion.id === "string" ? completion.id : null
             const usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } = completion.usage ?? {}
@@ -127,14 +123,18 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
                 byProcess: "promptcontent:createCampaignMessages",
                 campaignRef: meta.campaignRef ?? null,
                 segmentKey: meta.segmentKey ?? null,
-                context: {
-                    audiences: auds,
-                    attempt
-                }
+                context: { audiences: auds, attempt }
             })
 
-            if (responseStatus === "ok" && hasSegments) {
-                return segments
+            if (allGood && segments) return segments
+            if (hasSegments && segments) {
+                return segments.map(seg => ({
+                    ...seg,
+                    mensajes: seg.mensajes.slice(0, 3).map((m, i) => ({
+                        tipo: m.tipo || ["awareness", "consideration", "conversion"][i] || "mensaje",
+                        texto: m.texto || ""
+                    }))
+                }))
             }
         } catch (error: any) {
             const latencyMs = Date.now() - requestStartMs
@@ -162,16 +162,13 @@ DEVUELVE exactamente 3 mensajes de campañas de marketing por segmento.
                 byProcess: "promptcontent:createCampaignMessages",
                 campaignRef: meta.campaignRef ?? null,
                 segmentKey: meta.segmentKey ?? null,
-                context: {
-                    audiences: auds,
-                    attempt
-                }
+                context: { audiences: auds, attempt }
             })
             if (error?.status === 429 || error?.code === "insufficient_quota") {
-                return []
+                return fallbackSegments(auds)
             }
         }
     }
 
-    return []
+    return fallbackSegments(auds)
 }

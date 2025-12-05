@@ -8,12 +8,37 @@ const crypto_1 = require("crypto");
 const openai_1 = __importDefault(require("openai"));
 const aiLogs_1 = require("../../../utils/aiLogs");
 const aiPayload_1 = require("./aiPayload");
+/**
+ * The `normalizeString` function trims any leading or trailing whitespace from a string input.
+ * @param {unknown} value - The `value` parameter in the `normalizeString` function is of type
+ * `unknown`, which means it can be any type. The function checks if the type of `value` is a string,
+ * and if so, it trims any leading or trailing whitespace from the string. If the `value
+ */
 const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+/**
+ * The `normalizeArray` function takes an unknown value, checks if it is an array, trims any string
+ * elements, and filters out empty strings.
+ * @param {unknown} value - The `value` parameter in the `normalizeArray` function is of type
+ * `unknown`, which means it can be any type. The function checks if the `value` is an array, and if it
+ * is, it maps over the array to trim any strings and filter out empty strings. If the
+ */
 const normalizeArray = (value) => Array.isArray(value)
     ? value
         .map(item => (typeof item === "string" ? item.trim() : ""))
         .filter(item => item.length > 0)
     : [];
+/**
+ * The `normalizeTarget` function takes in a raw target object, normalizes its properties, and returns
+ * an AudienceTarget object with default values for missing properties.
+ * @param {any} rawTarget - The `normalizeTarget` function takes in a `rawTarget` parameter of type
+ * `any` and normalizes the data within it to create an `AudienceTarget` object. The function extracts
+ * specific properties from the `rawTarget` object, normalizes them using helper functions like
+ * `normalizeString`
+ * @returns The `normalizeTarget` function returns an object of type `AudienceTarget` with properties
+ * for audience, ageRange, gender, interests, location, lifestyle, profession, needs, objective, tone,
+ * and cta. Each property is normalized based on the input `rawTarget` object or set to a default value
+ * if not provided.
+ */
 const normalizeTarget = (rawTarget) => {
     const target = rawTarget ?? {};
     const audience = normalizeString(target.audience);
@@ -32,6 +57,18 @@ const normalizeTarget = (rawTarget) => {
         cta: normalizeString(target.cta)
     };
 };
+/**
+ * The function `getAudienceWithAI` uses OpenAI to analyze a given description and deduce various
+ * audience segments with inferred metadata, returning the results in a strict JSON format.
+ * @param {string} descripcion - The function `getAudienceWithAI` is designed to analyze a given
+ * description and deduce the target audiences mentioned or implied within that text. It follows
+ * specific instructions to identify and classify these target audiences based on various criteria such
+ * as age range, gender, interests, location, lifestyle, profession, needs
+ * @returns The function `getAudienceWithAI` returns an array of normalized audience targets. Each
+ * audience target object in the array contains the inferred metadata about a specific audience segment
+ * based on the provided description. The format of the output is strictly in JSON as specified in the
+ * function's system requirements.
+ */
 async function getAudienceWithAI(descripcion) {
     const key = process.env.OPENAI_API_KEY;
     if (!key)

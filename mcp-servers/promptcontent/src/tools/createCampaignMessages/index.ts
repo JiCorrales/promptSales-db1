@@ -3,16 +3,7 @@ import { Int32 } from "mongodb"
 import { z } from "zod"
 import { getDb } from "../../db"
 import { generateMessagesWithAI } from "./ai/messages"
-
-const audienceSchema = z.object({
-    edad: z.object({ min: z.number().int().min(13), max: z.number().int().max(100) }).optional(),
-    intereses: z.array(z.string()).optional(),
-    ubicaciones: z.array(z.string()).optional(),
-    genero: z.enum(["masculino", "femenino", "mixto"]).optional(),
-    nivelSocioeconomico: z.enum(["bajo", "medio", "alto", "mixto"]).optional()
-})
-
-type AudienceInput = z.infer<typeof audienceSchema>
+import { AudienceTarget, getAudienceWithAI } from "./ai/audience"
 
 export function registerCreateCampaignMessagesTool(server: McpServer) {
     server.registerTool(
@@ -20,13 +11,11 @@ export function registerCreateCampaignMessagesTool(server: McpServer) {
         {
             title: "Crear mensajes para campaña de marketing",
             description:
-                "Crea tres mensajes para una campaña de mercadeo a partir de una descripción textual y un perfil de público meta. El tool debe almacenar la solicitud y generar una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información proporcionada sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado debe incluir: ID de la campaña creada, la solicitud original, el público objetivo, los tres mensajes generados, la bitácora que describe el razonamiento, ajustes y consideraciones creativas.",
+                "Crea tres mensajes para una campaña de mercadeo a partir de una descripción textual. El tool detecta las audiencias con IA y genera una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información inferida sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado incluye: ID de la campaña creada, la solicitud original, las audiencias detectadas, los mensajes generados y la bitácora de consideraciones creativas.",
             inputSchema: {
                 descripcion: z
                     .string()
-                    .min(200)
-                    .describe("Descripción detallada de la campaña de mercadeo (mínimo 200 caracteres)"),
-                publico: z.array(audienceSchema).describe("Definición del público objetivo")
+                    .describe("Descripción detallada de la campaña de mercadeo para la cual se desean generar los mensajes.")
             },
             outputSchema: {
                 _id: z.string().optional(),
@@ -34,11 +23,17 @@ export function registerCreateCampaignMessagesTool(server: McpServer) {
                 campaignRef: z.string(),
                 audience: z.array(
                     z.object({
-                        edad: z.object({ min: z.number().int().min(13), max: z.number().int().max(100) }).nullable().optional(),
-                        intereses: z.array(z.string()),
-                        ubicaciones: z.array(z.string()),
-                        genero: z.enum(["masculino", "femenino", "mixto"]).nullable().optional(),
-                        nivelSocioeconomico: z.enum(["bajo", "medio", "alto", "mixto"]).nullable().optional()
+                        audience: z.string(),
+                        ageRange: z.string(),
+                        gender: z.string(),
+                        interests: z.array(z.string()),
+                        location: z.string(),
+                        lifestyle: z.string().nullable(),
+                        profession: z.string().nullable(),
+                        needs: z.array(z.string()),
+                        objective: z.string(),
+                        tone: z.string(),
+                        cta: z.string()
                     })
                 ),
                 messages: z.array(
@@ -53,11 +48,15 @@ export function registerCreateCampaignMessagesTool(server: McpServer) {
                 createdAt: z.string()
             }
         },
-        async ({ descripcion, publico }: { descripcion: string; publico: AudienceInput[] }) => {
+        async ({ descripcion }) => {
             const campaignId = `campaign_${Date.now()}`
-            const audienceProfiles: AudienceInput[] = Array.isArray(publico) ? publico : [publico]
-            const generatedSegments: any[] = []
+            const audienceProfiles: AudienceTarget[] = await getAudienceWithAI(descripcion)
+            if (!Array.isArray(audienceProfiles) || audienceProfiles.length === 0) {
+                throw new Error("audience_ai_failed")
+            }
 
+            const generatedSegments: any[] = []
+            // Generate messages for each audience segment
             for (const [audienceIndex, singleAudience] of audienceProfiles.entries()) {
                 const aiSegments = await generateMessagesWithAI(descripcion, [singleAudience], {
                     campaignRef: campaignId,
@@ -95,11 +94,9 @@ export function registerCreateCampaignMessagesTool(server: McpServer) {
             let insertedMongoId: string | undefined
 
             const audienceDescription = audienceProfiles
-                .map((audience: AudienceInput, index: number) => {
-                    const ageRange = audience.edad ? `${audience.edad.min ?? ""}-${audience.edad.max ?? ""}` : ""
-                    const interestsList = Array.isArray(audience.intereses) ? audience.intereses.join(",") : ""
-                    const locationsList = Array.isArray(audience.ubicaciones) ? audience.ubicaciones.join(",") : ""
-                    return `#${index + 1}:${ageRange}|${interestsList}|${locationsList}|${audience.genero || ""}`.trim()
+                .map((audience: AudienceTarget, index: number) => {
+                    const interestsList = Array.isArray(audience.interests) ? audience.interests.join(",") : ""
+                    return `#${index + 1}:${audience.ageRange}|${interestsList}|${audience.location}|${audience.gender}`.trim()
                 })
                 .join(" || ")
 
@@ -139,12 +136,18 @@ export function registerCreateCampaignMessagesTool(server: McpServer) {
                 _id: insertedMongoId,
                 logId: campaignId,
                 campaignRef: campaignId,
-                audience: audienceProfiles.map((audience: AudienceInput) => ({
-                    edad: audience.edad || null,
-                    intereses: audience.intereses || [],
-                    ubicaciones: audience.ubicaciones || [],
-                    genero: audience.genero || null,
-                    nivelSocioeconomico: audience.nivelSocioeconomico || null
+                audience: audienceProfiles.map((audience: AudienceTarget) => ({
+                    audience: audience.audience,
+                    ageRange: audience.ageRange,
+                    gender: audience.gender,
+                    interests: audience.interests,
+                    location: audience.location,
+                    lifestyle: audience.lifestyle || null,
+                    profession: audience.profession || null,
+                    needs: audience.needs,
+                    objective: audience.objective,
+                    tone: audience.tone,
+                    cta: audience.cta
                 })),
                 messages: campaignMessages.map((message: { role: string; text: string; ts: Date }) => ({
                     role: message.role,

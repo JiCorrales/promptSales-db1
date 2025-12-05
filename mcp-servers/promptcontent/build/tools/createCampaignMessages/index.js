@@ -5,34 +5,32 @@ const mongodb_1 = require("mongodb");
 const zod_1 = require("zod");
 const db_1 = require("../../db");
 const messages_1 = require("./ai/messages");
-const audienceSchema = zod_1.z.object({
-    edad: zod_1.z.object({ min: zod_1.z.number().int().min(13), max: zod_1.z.number().int().max(100) }).optional(),
-    intereses: zod_1.z.array(zod_1.z.string()).optional(),
-    ubicaciones: zod_1.z.array(zod_1.z.string()).optional(),
-    genero: zod_1.z.enum(["masculino", "femenino", "mixto"]).optional(),
-    nivelSocioeconomico: zod_1.z.enum(["bajo", "medio", "alto", "mixto"]).optional()
-});
+const audience_1 = require("./ai/audience");
 function registerCreateCampaignMessagesTool(server) {
     server.registerTool("createCampaignMessages", {
         title: "Crear mensajes para campaña de marketing",
-        description: "Crea tres mensajes para una campaña de mercadeo a partir de una descripción textual y un perfil de público meta. El tool debe almacenar la solicitud y generar una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información proporcionada sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado debe incluir: ID de la campaña creada, la solicitud original, el público objetivo, los tres mensajes generados, la bitácora que describe el razonamiento, ajustes y consideraciones creativas.",
+        description: "Crea tres mensajes para una campaña de mercadeo a partir de una descripción textual. El tool detecta las audiencias con IA y genera una bitácora automática de tres mensajes adaptados al público objetivo, utilizando la información inferida sobre la campaña. Los mensajes deben ser coherentes con el propósito de la campaña, reflejar el tono adecuado para ese público meta y registrar en la bitácora cualquier decisión creativa tomada. El resultado incluye: ID de la campaña creada, la solicitud original, las audiencias detectadas, los mensajes generados y la bitácora de consideraciones creativas.",
         inputSchema: {
             descripcion: zod_1.z
                 .string()
-                .min(200)
-                .describe("Descripción detallada de la campaña de mercadeo (mínimo 200 caracteres)"),
-            publico: zod_1.z.array(audienceSchema).describe("Definición del público objetivo")
+                .describe("Descripción detallada de la campaña de mercadeo para la cual se desean generar los mensajes.")
         },
         outputSchema: {
             _id: zod_1.z.string().optional(),
             logId: zod_1.z.string(),
             campaignRef: zod_1.z.string(),
             audience: zod_1.z.array(zod_1.z.object({
-                edad: zod_1.z.object({ min: zod_1.z.number().int().min(13), max: zod_1.z.number().int().max(100) }).nullable().optional(),
-                intereses: zod_1.z.array(zod_1.z.string()),
-                ubicaciones: zod_1.z.array(zod_1.z.string()),
-                genero: zod_1.z.enum(["masculino", "femenino", "mixto"]).nullable().optional(),
-                nivelSocioeconomico: zod_1.z.enum(["bajo", "medio", "alto", "mixto"]).nullable().optional()
+                audience: zod_1.z.string(),
+                ageRange: zod_1.z.string(),
+                gender: zod_1.z.string(),
+                interests: zod_1.z.array(zod_1.z.string()),
+                location: zod_1.z.string(),
+                lifestyle: zod_1.z.string().nullable(),
+                profession: zod_1.z.string().nullable(),
+                needs: zod_1.z.array(zod_1.z.string()),
+                objective: zod_1.z.string(),
+                tone: zod_1.z.string(),
+                cta: zod_1.z.string()
             })),
             messages: zod_1.z.array(zod_1.z.object({
                 role: zod_1.z.string(),
@@ -43,10 +41,14 @@ function registerCreateCampaignMessagesTool(server) {
             lastMessageTs: zod_1.z.string(),
             createdAt: zod_1.z.string()
         }
-    }, async ({ descripcion, publico }) => {
+    }, async ({ descripcion }) => {
         const campaignId = `campaign_${Date.now()}`;
-        const audienceProfiles = Array.isArray(publico) ? publico : [publico];
+        const audienceProfiles = await (0, audience_1.getAudienceWithAI)(descripcion);
+        if (!Array.isArray(audienceProfiles) || audienceProfiles.length === 0) {
+            throw new Error("audience_ai_failed");
+        }
         const generatedSegments = [];
+        // Generate messages for each audience segment
         for (const [audienceIndex, singleAudience] of audienceProfiles.entries()) {
             const aiSegments = await (0, messages_1.generateMessagesWithAI)(descripcion, [singleAudience], {
                 campaignRef: campaignId,
@@ -78,10 +80,8 @@ function registerCreateCampaignMessagesTool(server) {
         let insertedMongoId;
         const audienceDescription = audienceProfiles
             .map((audience, index) => {
-            const ageRange = audience.edad ? `${audience.edad.min ?? ""}-${audience.edad.max ?? ""}` : "";
-            const interestsList = Array.isArray(audience.intereses) ? audience.intereses.join(",") : "";
-            const locationsList = Array.isArray(audience.ubicaciones) ? audience.ubicaciones.join(",") : "";
-            return `#${index + 1}:${ageRange}|${interestsList}|${locationsList}|${audience.genero || ""}`.trim();
+            const interestsList = Array.isArray(audience.interests) ? audience.interests.join(",") : "";
+            return `#${index + 1}:${audience.ageRange}|${interestsList}|${audience.location}|${audience.gender}`.trim();
         })
             .join(" || ");
         try {
@@ -120,11 +120,17 @@ function registerCreateCampaignMessagesTool(server) {
             logId: campaignId,
             campaignRef: campaignId,
             audience: audienceProfiles.map((audience) => ({
-                edad: audience.edad || null,
-                intereses: audience.intereses || [],
-                ubicaciones: audience.ubicaciones || [],
-                genero: audience.genero || null,
-                nivelSocioeconomico: audience.nivelSocioeconomico || null
+                audience: audience.audience,
+                ageRange: audience.ageRange,
+                gender: audience.gender,
+                interests: audience.interests,
+                location: audience.location,
+                lifestyle: audience.lifestyle || null,
+                profession: audience.profession || null,
+                needs: audience.needs,
+                objective: audience.objective,
+                tone: audience.tone,
+                cta: audience.cta
             })),
             messages: campaignMessages.map((message) => ({
                 role: message.role,

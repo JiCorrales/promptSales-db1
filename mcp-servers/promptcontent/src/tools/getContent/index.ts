@@ -10,7 +10,7 @@ export function registerGetContentTool(server: McpServer) {
         "getContent",
         {
             title: "Buscar imágenes por descripción",
-            description: "Busca imágenes relevantes (ES/EN) usando embeddings en Pinecone a partir de una descripción y devuelve URLs con metadatos más hashtags sugeridos",
+            description: "Usa este tool cuando el usuario solicite imágenes, referencias visuales, inspiración visual, material gráfico, recursos visuales, ideas de contenido basado en imágenes, o cuando la intención sea obtener recursos visuales relevantes a partir de un concepto descrito en texto. El tool toma una descripción textual proporcionada por el usuario y genera embeddings del contenido para realizar una búsqueda semántica en Pinecone. Con esa búsqueda, recupera imágenes relevantes en español o inglés, priorizando coincidencias conceptuales, temáticas, estéticas y contextuales. El tool debe devolver URLs de las imágenes encontradas junto con sus metadatos disponibles, tales como título, etiquetas, categorías, fuente o resolución. Además, genera un conjunto de hashtags sugeridos basados en el contenido de la descripción y los conceptos presentes en las imágenes recuperadas. Llama a este tool únicamente cuando el usuario esté pidiendo imágenes o contenido visual derivado de una descripción textual. No lo llames si el usuario pide texto, análisis, redacción, código o cualquier otra información no relacionada con contenido visual.",
             inputSchema: {
                 descripcion: z.string().describe("Descripción textual para buscar imágenes")
             },
