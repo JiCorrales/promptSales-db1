@@ -1,30 +1,59 @@
-use PromptAds;
+﻿use PromptAds;
 
--- Companies que nunca han tenido campa�as
-SELECT c.CompanyId, c.name
-FROM dbo.Companies c
+
+-- EXCEPT
+-- CampaignStatus NO usados aún en ninguna campaña
+-- Todos los estados de campaña definidos en el catálogo
+SELECT 
+    cs.CampaignStatusId,
+    cs.name
+FROM dbo.CampaignStatus cs
 
 EXCEPT
 
-SELECT DISTINCT ca.CompanyId, c2.name
-FROM dbo.Campaigns ca
-JOIN dbo.Companies c2 ON c2.CompanyId = ca.CompanyId;
+-- Estados de campaña que ya están siendo utilizados por al menos una campaña
+SELECT DISTINCT
+    c.CampaignStatusId,
+    cs2.name
+FROM dbo.Campaigns c
+JOIN dbo.CampaignStatus cs2
+    ON cs2.CampaignStatusId = c.CampaignStatusId;
 
 
--- Marcas con campa�as activas
-SELECT DISTINCT c.BrandId
+
+/*
+INTERSECT
+-- Encontrar BrandId (marcas) que cumplan AMBAS condiciones:
+         a) Tienen al menos una campaña Activa.
+         b) Tienen al menos una campaña (de cualquier estado)
+            con presupuesto mayor a 20000.
+*/
+-- Marcas con campañas activas
+SELECT b.BrandId, b.name AS BrandName
+FROM dbo.Brands b
+WHERE b.BrandId IN (
+    SELECT DISTINCT c.BrandId
 FROM dbo.Campaigns c
 JOIN dbo.CampaignStatus cs ON cs.CampaignStatusId = c.CampaignStatusId
 WHERE cs.name = 'Activa'
 
 INTERSECT
 
--- Marcas con campa�as de alto presupuesto (cualquier estado)
+-- Marcas con campañas de alto presupuesto (cualquier estado)
 SELECT DISTINCT c2.BrandId
 FROM dbo.Campaigns c2
-WHERE c2.budget > 20000;
+WHERE c2.budget > 20000
+);
 
 
+
+/*
+MERGE
+- Mantener un "watermark" de ETL en la tabla dbo.ETLWatermark
+para el proceso PromptAds_To_PromptSales_Summary.
+- Si ya existe la fila → se hace UPDATE (fecha y notas).
+- Si no existe → se inserta una nueva fila.
+*/
 
 -- Actualizar / insertar watermark de un proceso ETL
 
@@ -35,17 +64,13 @@ SELECT
 FROM dbo.ETLWatermark
 WHERE processName = 'PromptAds_To_PromptSales_Summary';
 
-USE PromptAds;
-GO
-
-
 
 MERGE dbo.ETLWatermark AS target
 USING (
     SELECT
         'PromptAds_To_PromptSales_Summary' AS processName,
         GETDATE()                           AS LastSuccessAt,
-        'Actualizaci�n desde proceso ETL'   AS Notes
+        'Actualización desde proceso ETL'   AS Notes
 ) AS src
 ON target.processName = src.processName
 WHEN MATCHED THEN
@@ -57,7 +82,9 @@ WHEN NOT MATCHED BY TARGET THEN
     VALUES (src.processName, src.LastSuccessAt, src.Notes);
 
 
-    -- Ver c�mo LTRIM limpia espacios iniciales en el nombre de campa�a
+
+-- LTRIM
+-- Eliminar espacios en blanco a la izquierda de un texto.
 SELECT TOP (10)
     c.CampaignId,
     c.name                         AS NombreOriginal,
@@ -67,8 +94,8 @@ FROM dbo.Campaigns AS c;
 
 
 
-
--- Normalizar emails de usuarios (min�sculas y sin espacios a los lados)
+--LOWERCASE
+-- Normalizar apellidos de usuarios (minúsculas y sin espacios a los lados)
 SELECT
     UserId,
     LastName                                   AS Apellido,
@@ -76,36 +103,33 @@ SELECT
 FROM dbo.Users;
 
 
--- Ejemplo de redondeo de costo en m�tricas de anuncios
+
+-- FLOOR/CEILING
+/*
+Demostrar funciones de redondeo:
+    - AVG(cost): promedio exacto.
+    - FLOOR(AVG(cost)): redondeo hacia abajo.
+    - CEILING(AVG(cost)): redondeo hacia arriba.
+*/
 SELECT TOP (20)
     AdId,
-    AVG(cost)      AS AvgCost,
-    FLOOR(AVG(cost))   AS CostFloor,
-    CEILING(AVG(cost)) AS CostCeiling
+    AVG(cost)          AS AvgCost,         -- promedio real
+    FLOOR(AVG(cost))   AS CostFloor,       -- redondeo hacia abajo
+    CEILING(AVG(cost)) AS CostCeiling      -- redondeo hacia arriba
 FROM dbo.AdMetricsDaily
 GROUP BY AdId
 ORDER BY AdId;
 
-SELECT TOP (20)
-    AdId,
-    COUNT(*) AS NumMedias
-FROM dbo.AdMedias
-GROUP BY AdId
-ORDER BY NumMedias DESC;
 
 
+-- UPDATE DE SELECT
+/*
+- Demostrar un patrón clásico de "UPDATE basado en SELECT":
+     1) Se calcula un valor derivado en un CTE (ReachCalc).
+     2) Se utiliza ese CTE para actualizar la tabla base usando un JOIN.
+*/
 
-
--- Bucket de impresiones en miles
-SELECT
-    AdId,
-    impressions,
-    FLOOR(impressions / 1000.0)  AS MilesImpresionesFloor,
-    CEILING(impressions / 1000.0) AS MilesImpresionesCeil
-FROM dbo.AdMetricsDaily;
-
-
-;WITH ReachCalc AS (
+WITH ReachCalc AS (
     SELECT
         AdId,
         posttime,

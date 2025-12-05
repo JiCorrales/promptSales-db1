@@ -1,42 +1,72 @@
 USE PromptAds;
 GO
 
+/* ============================================================
+   DEFINICIÓN DE TIPOS DE TABLA (TVPs)
+   Estos TVPs se usan para pasar datos "en lote" al SP:
+   - @Markets: lista de MarketId para la campaña.
+   - @Ads:     lista de anuncios de la campaña.
+   - @AdChannels: canales para cada anuncio (ligados por TempAdKey).
+============================================================ */
+
+
 IF TYPE_ID('dbo.TVP_CampaignMarkets') IS NOT NULL
     DROP TYPE dbo.TVP_CampaignMarkets;
 GO
 
+-- TVP para la lista de mercados de la campaña
 CREATE TYPE dbo.TVP_CampaignMarkets AS TABLE
 (
-    MarketId bigint NOT NULL
+    MarketId bigint NOT NULL   -- Debe existir en dbo.Markets
 );
 GO
+
 
 
 IF TYPE_ID('dbo.TVP_CampaignAds') IS NOT NULL
     DROP TYPE dbo.TVP_CampaignAds;
 GO
 
+-- TVP para la lista de anuncios de la campaña
 CREATE TYPE dbo.TVP_CampaignAds AS TABLE
 (
-    TempAdKey     int           NOT NULL,          -- Identificador temporal del anuncio en el TVP
-    [name]        varchar(100)  NOT NULL,
-    [description] varchar(400)  NULL,
-    AdTypeId      int           NOT NULL,          
-    AdStatusId    int           NULL               
+    TempAdKey     int           NOT NULL,   -- Identificador temporal del anuncio en el TVP
+    [name]        varchar(100)  NOT NULL,   -- Nombre del anuncio
+    [description] varchar(400)  NULL,       -- Descripción del anuncio
+    AdTypeId      int           NOT NULL,   -- Debe existir en dbo.AdTypes
+    AdStatusId    int           NULL        -- Si viene NULL se usará 'Borrador' dentro del SP
 );
 GO
+
 
 
 IF TYPE_ID('dbo.TVP_AdChannels') IS NOT NULL
     DROP TYPE dbo.TVP_AdChannels;
 GO
 
+-- TVP para canales por anuncio, enlazados por TempAdKey
 CREATE TYPE dbo.TVP_AdChannels AS TABLE
 (
-    TempAdKey int     NOT NULL,   
-    ChannelId bigint  NOT NULL    
+    TempAdKey int     NOT NULL,   -- Debe existir en TVP_CampaignAds.TempAdKey
+    ChannelId bigint  NOT NULL    -- Debe existir en dbo.Channels
 );
 GO
+
+
+/* 
+   SP_CreateCampaign
+   Objetivo:
+     - Crear una campaña completa (Campaigns) de forma TRANSACCIONAL.
+     - Insertar:
+         * Campaign
+         * CampaignMarkets (mercados asociados)
+         * Ads de la campaña
+         * ChannelsPerAd (canales por anuncio)
+     - Usar TVPs para recibir la info de mercados, anuncios y canales.
+   Convención de nombre:
+     - CAMSP_  = "Stored Procedure de Campaign"
+     - CreateCampaign = verbo + entidad
+*/
 
 
 IF OBJECT_ID('dbo.CAMSP_CreateCampaign', 'P') IS NOT NULL
@@ -44,31 +74,35 @@ IF OBJECT_ID('dbo.CAMSP_CreateCampaign', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.CAMSP_CreateCampaign
-    @CompanyId        bigint,
-    @BrandId          bigint = NULL,
-    @Name             varchar(150),
-    @Description      varchar(400) = NULL,
-    @StartDate        datetime,
-    @EndDate          datetime,
-    @Budget           decimal(18,2),
-    @CampaignStatusId int = NULL,                          
-    @Markets          dbo.TVP_CampaignMarkets READONLY,    -- Lista de mercados
-    @Ads              dbo.TVP_CampaignAds      READONLY,   -- Lista de anuncios
-    @AdChannels       dbo.TVP_AdChannels       READONLY    -- Canales por anuncio (TempAdKey)
+    @CompanyId        bigint,                           -- Compañía dueña de la campaña
+    @BrandId          bigint = NULL,                    -- Marca (puede ser NULL)
+    @Name             varchar(150),                     -- Nombre de la campaña
+    @Description      varchar(400) = NULL,              -- Descripción de la campaña
+    @StartDate        datetime,                         -- Fecha de inicio
+    @EndDate          datetime,                         -- Fecha de fin
+    @Budget           decimal(18,2),                    -- Presupuesto de la campaña
+    @CampaignStatusId int = NULL,                       -- Estado de campaña (si NULL se usa 'Planificada')
+    @Markets          dbo.TVP_CampaignMarkets READONLY, -- Lista de mercados
+    @Ads              dbo.TVP_CampaignAds      READONLY, -- Lista de anuncios
+    @AdChannels       dbo.TVP_AdChannels       READONLY  -- Canales por anuncio (TempAdKey)
 AS
 BEGIN
-    SET NOCOUNT ON;
+    SET NOCOUNT ON;  
 
     DECLARE 
-        @NewCampaignId      bigint,
-        @Now                datetime = GETDATE(),
-        @DefaultStatusId    int,
-        @DefaultAdStatusId  int;
+        @NewCampaignId      bigint,          -- Id de la campaña recién creada
+        @Now                datetime = GETDATE(), -- Timestamp de creación
+        @DefaultStatusId    int,             -- Id de CampaignStatus 'Planificada'
+        @DefaultAdStatusId  int;             -- Id de AdStatus 'Borrador'
 
-    -- tabla staging para los Ads (copiamos el TVP y le damos un orden fijo)
+    /* Tabla staging para los Ads:
+       - Copia el contenido del TVP @Ads
+       - Agrega una columna rn para tener un orden fijo
+       - Ayuda a mapear luego TempAdKey -> AdId de forma determinista
+    */
     DECLARE @AdsOrdered TABLE
     (
-        rn         int IDENTITY(1,1) PRIMARY KEY,
+        rn         int IDENTITY(1,1) PRIMARY KEY,   -- índice secuencial
         TempAdKey  int           NOT NULL,
         [name]     varchar(100)  NOT NULL,
         [description] varchar(400) NULL,
@@ -76,7 +110,9 @@ BEGIN
         AdStatusId int           NULL
     );
 
-    -- tabla para mapear TempAdKey -> AdId
+    /* Tabla temporal para mapear TempAdKey (del TVP) con el AdId real
+       que se genera en Ads
+    */
     DECLARE @NewAds TABLE
     (
         TempAdKey int NOT NULL,
@@ -84,22 +120,30 @@ BEGIN
     );
 
     BEGIN TRY
-        BEGIN TRAN;
+        BEGIN TRAN;  -- Inicio transacción
 
         
-        -- 1) VALIDACIONES BÁSICAS
+        -- VALIDACIONES BÁSICAS DE ENTRADA
         
 
+        -- Validar que la fecha de inicio no sea mayor que la de fin
         IF @StartDate > @EndDate
         BEGIN
             RAISERROR('CAMSP_CreateCampaign: La fecha de inicio no puede ser mayor que la fecha de fin.', 16, 1);
         END;
 
-        IF NOT EXISTS (SELECT 1 FROM dbo.Companies c WHERE c.CompanyId = @CompanyId AND c.active = 1)
+        -- Validar que la compañía exista y esté activa
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM dbo.Companies c 
+            WHERE c.CompanyId = @CompanyId 
+              AND c.active = 1
+        )
         BEGIN
             RAISERROR('CAMSP_CreateCampaign: La compañía indicada no existe o no está activa.', 16, 1);
         END;
 
+        -- Si viene BrandId, validar que esa marca pertenezca a la compañía
         IF @BrandId IS NOT NULL
         BEGIN
             IF NOT EXISTS (
@@ -113,17 +157,19 @@ BEGIN
             END;
         END;
 
+        -- Debe venir al menos un MarketId en el TVP @Markets
         IF NOT EXISTS (SELECT 1 FROM @Markets)
         BEGIN
             RAISERROR('CAMSP_CreateCampaign: Debe indicar al menos un MarketId en el TVP @Markets.', 16, 1);
         END;
 
+        -- Debe venir al menos un Ad en el TVP @Ads
         IF NOT EXISTS (SELECT 1 FROM @Ads)
         BEGIN
             RAISERROR('CAMSP_CreateCampaign: Debe indicar al menos un anuncio en el TVP @Ads.', 16, 1);
         END;
 
-        -- Validar que todos los MarketId existan
+        -- Validar que todos los MarketId existan en dbo.Markets
         IF EXISTS (
             SELECT m.MarketId
             FROM @Markets m
@@ -134,7 +180,7 @@ BEGIN
             RAISERROR('CAMSP_CreateCampaign: Existen MarketId en @Markets que no están registrados en dbo.Markets.', 16, 1);
         END;
 
-        -- Validar que todos los AdTypeId existan
+        -- Validar que todos los AdTypeId existan en dbo.AdTypes
         IF EXISTS (
             SELECT a.AdTypeId
             FROM @Ads a
@@ -145,7 +191,7 @@ BEGIN
             RAISERROR('CAMSP_CreateCampaign: Existen AdTypeId en @Ads que no están registrados en dbo.AdTypes.', 16, 1);
         END;
 
-        -- Validar que todos los ChannelId existan (si se envía algo en @AdChannels)
+        -- Validar que todos los ChannelId de @AdChannels existan en dbo.Channels
         IF EXISTS (
             SELECT ac.ChannelId
             FROM @AdChannels ac
@@ -156,7 +202,7 @@ BEGIN
             RAISERROR('CAMSP_CreateCampaign: Existen ChannelId en @AdChannels que no están registrados en dbo.Channels.', 16, 1);
         END;
 
-        -- Validar que TempAdKey de @AdChannels exista en @Ads
+        -- Validar que todos los TempAdKey en @AdChannels existan en @Ads
         IF EXISTS (
             SELECT ac.TempAdKey
             FROM @AdChannels ac
@@ -169,10 +215,10 @@ BEGIN
 
 
         
-        -- 2) RESOLVER IDs POR DEFECTO (Campaña y Ads)
+        -- RESOLVER IDs POR DEFECTO (Campaña y Ads)
         
 
-        -- Estado por defecto para campañas: 'Planificada'
+        -- Si no se pasó CampaignStatusId, usar el estado 'Planificada'
         IF @CampaignStatusId IS NULL
         BEGIN
             SELECT @DefaultStatusId = cs.CampaignStatusId
@@ -187,7 +233,7 @@ BEGIN
             SET @CampaignStatusId = @DefaultStatusId;
         END;
 
-        -- Estado por defecto para Ads: 'Borrador'
+        -- Obtener el estado por defecto para Ads = 'Borrador'
         SELECT @DefaultAdStatusId = s.AdStatusId
         FROM dbo.AdStatus s
         WHERE s.name = 'Borrador';
@@ -199,7 +245,7 @@ BEGIN
 
 
         
-        -- 3) INSERTAR CAMPAÑA
+        -- INSERTAR CAMPAÑA PRINCIPAL
         
 
         INSERT INTO dbo.Campaigns
@@ -220,7 +266,7 @@ BEGIN
             @Name,
             @Description,
             @Now,
-            NULL,
+            NULL,             -- updatedAt inicialmente NULL
             @StartDate,
             @EndDate,
             @Budget,
@@ -229,12 +275,13 @@ BEGIN
             @BrandId
         );
 
+        -- Obtenemos el ID generado por identidad
         SET @NewCampaignId = SCOPE_IDENTITY();
         PRINT CONCAT('CAMSP_CreateCampaign: Campaign creada con CampaignId = ', @NewCampaignId, '.');
 
 
         
-        -- 4) INSERTAR CAMPAIGNMARKETS
+        -- INSERTAR CAMPAIGNMARKETS (MERCADOS ASOCIADOS)
         
 
         INSERT INTO dbo.CampaignMarkets (CampaignId, MarketId)
@@ -242,13 +289,13 @@ BEGIN
             @NewCampaignId,
             m.MarketId
         FROM @Markets m
-        GROUP BY m.MarketId;   -- Evitamos duplicados
+        GROUP BY m.MarketId;   -- Por si en el TVP vienen repetidos
 
         PRINT CONCAT('CAMSP_CreateCampaign: Insertados ', @@ROWCOUNT, ' CampaignMarkets.');
 
 
         
-        -- 5) PREPARAR ADS (STAGING con rn)
+        -- PREPARAR ADS EN TABLA STAGING (@AdsOrdered)
         
 
         INSERT INTO @AdsOrdered
@@ -262,11 +309,11 @@ BEGIN
             AdTypeId,
             AdStatusId
         FROM @Ads
-        ORDER BY TempAdKey;  -- definimos un orden determinista
+        ORDER BY TempAdKey;  -- definimos un orden determinista por TempAdKey
 
 
         
-        -- 6) INSERTAR ADS REALES
+        -- INSERTAR ADS REALES EN dbo.Ads
         
 
         INSERT INTO dbo.Ads
@@ -278,6 +325,7 @@ BEGIN
             [updatedAt],
             AdStatusId,
             AdTypeId
+            -- enabled, deleted, processed usan sus DEFAULTs
         )
         SELECT
             @NewCampaignId,
@@ -285,16 +333,16 @@ BEGIN
             ao.[description],
             @Now,
             NULL,
-            ISNULL(ao.AdStatusId, @DefaultAdStatusId),
+            ISNULL(ao.AdStatusId, @DefaultAdStatusId), -- si viene NULL se usa 'Borrador'
             ao.AdTypeId
         FROM @AdsOrdered ao
-        ORDER BY ao.rn;
+        ORDER BY ao.rn;  -- mismo orden que en @AdsOrdered
 
         PRINT CONCAT('CAMSP_CreateCampaign: Insertados ', @@ROWCOUNT, ' Ads.');
 
 
         
-        -- 7) CONSTRUIR MAPPING TempAdKey -> AdId USANDO rn
+        -- CONSTRUIR MAPPING TempAdKey -> AdId USANDO rn
         
 
         ;WITH NewAdsCTE AS
@@ -316,18 +364,18 @@ BEGIN
 
 
         
-        -- 8) INSERTAR CHANNELS POR AD
+        -- INSERTAR CHANNELS POR AD EN dbo.ChannelsPerAd
         
 
         INSERT INTO dbo.ChannelsPerAd
         (
             AdId,
             ChannelId
-            -- enabled usa default
+            -- enabled utiliza el default de la tabla
         )
         SELECT
-            na.AdId,
-            ac.ChannelId
+            na.AdId,        -- Ad real (Identity)
+            ac.ChannelId    -- Canal que venía en el TVP, ligado por TempAdKey
         FROM @AdChannels ac
         JOIN @NewAds     na ON na.TempAdKey = ac.TempAdKey;
 
@@ -335,12 +383,12 @@ BEGIN
 
 
         
-        -- 9) COMMIT Y RESULTADOS
+        -- COMMIT DE LA TRANSACCIÓN Y RESULTADOS
         
 
         COMMIT TRAN;
 
-        -- Devolvemos info de la campaña
+        -- Devolvemos un resumen de la campaña creada
         SELECT
             @NewCampaignId AS CampaignId,
             @Name          AS CampaignName,
@@ -348,7 +396,7 @@ BEGIN
             @EndDate       AS EndDate,
             @Budget        AS Budget;
 
-        -- Devolvemos mapping de Ads creados
+        -- Devolvemos el mapping de Ads creados (AdId real vs TempAdKey)
         SELECT
             na.AdId,
             na.TempAdKey
@@ -356,6 +404,7 @@ BEGIN
 
     END TRY
     BEGIN CATCH
+        -- En caso de error, revertimos la transacción y propagamos mensaje
         IF @@TRANCOUNT > 0
             ROLLBACK TRAN;
 
@@ -371,40 +420,41 @@ END;
 GO
 
 
-
-
------------------ EJEMPLO -----------------
+/*
+   EJEMPLO DE USO DEL SP CON TVPs
+*/
 
 DECLARE @Markets dbo.TVP_CampaignMarkets;
 DECLARE @Ads     dbo.TVP_CampaignAds;
 DECLARE @AdCh    dbo.TVP_AdChannels;
 
--- Mercados
+-- Mercados de la campaña
 INSERT INTO @Markets (MarketId)
 VALUES (1), (2), (3);
 
--- Anuncios
+-- Anuncios de la campaña
 INSERT INTO @Ads (TempAdKey, [name], [description], AdTypeId, AdStatusId)
 VALUES 
-    (1, 'Ad lanzamiento', 'Anuncio principal', 1, NULL),   -- usará AdStatus 'Borrador'
-    (2, 'Ad remarketing', 'Seguimiento a interesados', 2, NULL);
+    (1, 'Ad lanzamiento',  'Anuncio principal',           1, NULL), -- usará AdStatus 'Borrador'
+    (2, 'Ad remarketing', 'Seguimiento a interesados',    2, NULL);
 
--- Canales por anuncio
+-- Canales por anuncio (usando TempAdKey)
 INSERT INTO @AdCh (TempAdKey, ChannelId)
 VALUES
-    (1, 1),    -- Ad 1 en Facebook
-    (1, 2),    -- Ad 1 en Instagram
-    (2, 3);    -- Ad 2 en TikTok
+    (1, 1),    -- Ad 1 en canal 1 (ej. Facebook)
+    (1, 2),    -- Ad 1 en canal 2 (ej. Instagram)
+    (2, 3);    -- Ad 2 en canal 3 (ej. TikTok)
 
+-- Llamada al SP de negocio
 EXEC dbo.CAMSP_CreateCampaign
     @CompanyId        = 1,
     @BrandId          = 1,
-    @Name             = 'Campaña Black Friday',
-    @Description      = 'Campaña para ventas de Black Friday',
+    @Name             = 'Campaña Navidad',
+    @Description      = 'Campaña para ventas de Navidad',
     @StartDate        = '2025-11-01',
-    @EndDate          = '2025-11-30',
+    @EndDate          = '2025-12-25',
     @Budget           = 50000,
-    @CampaignStatusId = NULL,       -- se usa 'Planificada'
+    @CampaignStatusId = NULL,       -- se usará estado 'Planificada'
     @Markets          = @Markets,
     @Ads              = @Ads,
     @AdChannels       = @AdCh;
