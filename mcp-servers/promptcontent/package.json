@@ -3,13 +3,13 @@
     "version": "1.0.0",
     "description": "MCP server for PromptAds (Kubernetes deployment)",
     "type": "commonjs",
-    "main": "build/server.js",
+    "main": "build/index.js",
     "scripts": {
         "server:build": "tsc",
         "server:build:watch": "tsc --watch",
-        "server:dev": "tsx src/server.ts",
-        "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:dev",
-        "server:stdio": "node build/server.js",
+        "server:dev": "tsx src/index.ts",
+        "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:stdio",
+        "server:stdio": "node build/index.js",
         "db:seed": "tsx scripts/seedImages.ts",
         "db:embed": "tsx scripts/embedAndUpsert.ts",
         "pinecone:init": "tsx scripts/embedAndUpsert.ts --init-only"
@@ -18,16 +18,18 @@
     "devDependencies": {
         "@modelcontextprotocol/inspector": "^0.17.2",
         "@types/node": "^24.0.3",
+        "@types/pg": "^8.15.6",
         "tsx": "^4.20.3",
         "typescript": "^5.8.3"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.21.1",
-        "zod": "^3.23.8",
-        "mongodb": "^6.9.0",
         "@pinecone-database/pinecone": "^2.2.2",
-        "openai": "^4.28.4",
+        "axios": "^1.6.2",
         "dotenv": "^16.4.5",
-        "axios": "^1.6.2"
+        "mongodb": "^6.9.0",
+        "openai": "^4.28.4",
+        "pg": "^8.16.3",
+        "zod": "^3.23.8"
     }
 }

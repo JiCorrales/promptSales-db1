@@ -18,19 +18,16 @@ async function semanticSearch(query) {
         console.log("[semanticSearch] vector", { len: queryVector.length });
         if (queryVector.length !== embeddingDimension)
             throw new Error("EMBED_DIM_MISMATCH");
-        // Preparar la consulta de búsqueda en Pinecone
         const searchQuery = { vector: queryVector, topK: 5, includeMetadata: true };
-        // Ejecutar la consulta en Pinecone
         const searchResponse = await index.query(searchQuery);
         console.log("[semanticSearch] matches", { count: (searchResponse.matches || []).length, sample: searchResponse.matches?.[0]?.id });
-        // Mapear los resultados de Pinecone a un formato más sencillo
         return (searchResponse.matches || []).map(match => ({
             id: match.id,
             score: typeof match.score === "number" ? match.score : undefined
         }));
     }
-    catch (e) {
-        console.error("[semanticSearch] error", e);
+    catch (error) {
+        console.error("[semanticSearch] error", error);
         return [];
     }
 }

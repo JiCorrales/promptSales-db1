@@ -1,7 +1,7 @@
 # PromptContent MCP API
 
 ## Visión General
-Servidor MCP que expone dos herramientas: `getContent` y `campaignDiary`. Ambas reciben entradas estructuradas y retornan contenido y metadatos listos para usar. El servidor soporta persistencia opcional en MongoDB y indexación vectorial en Postgres (pgvector).
+Servidor MCP que expone tres herramientas: `getContent`, `campaignDiary` y `queryCampaignPerformance`. Todas reciben entradas estructuradas y retornan contenido y metadatos listos para usar. El servidor soporta persistencia opcional en MongoDB y indexación vectorial en Postgres (pgvector).
 
 ## Herramienta: getContent
 - Entrada mínima: `description` (string, >=10 chars)
@@ -31,6 +31,14 @@ Servidor MCP que expone dos herramientas: `getContent` y `campaignDiary`. Ambas 
 - Entrada: `campaignName`, `campaignDescription`, `objective`, `keyOffer?`, `launchWindow?`, `tone?`, `callToAction?`, `targetAudiences[{ name, profile?, motivations[], pains[], preferredChannels[] }]`
 - Salida:
   - `requestId`, `campaignName`
+
+## Herramienta: queryCampaignPerformance
+
+- Entrada: `question` (texto en lenguaje natural sobre campañas); el servidor intenta inferir identificadores o contextos financieros/temporales dentro del texto.
+- Salida:
+  - `question` y un `summary` textual que resume la consulta.
+  - `campaigns[]`, un arreglo de objetos que entregan `campaignId`, `campaignName`, `companyName`, `status`, `budgetAmount`, rangos de fechas, métricas de alcance (`reach`, `impressions`, `clicks`, `interactions`, `hoursViewed`), tasas (`conversionRate`, `engagementRate`, `roi`), ventas (`orders`, `salesAmount`, `adsRevenue`, `returnsAmount`, `currencyId`), desglose de reacciones (`interactionsBreakdown`), usuarios contactados (`usersReached`), canales (`channels`, `targetMarkets`) y un subobjeto `crm` con leads, eventos de conversión, conteo por estado (`leadStatusCounts`) y nombres de canales.
+- ¿Qué hace?: Consulta Postgres (`PromptAdsSnapshots`, `CampaignChannels`, `Interactions`, `Calculations`, `salesSummary`, `PromptCrmSnapshots`) para devolver estadísticas consolidadas que permiten a la IA responder preguntas sobre alcance, porcentaje de éxito, ventas alcanzadas, cantidad de reacciones, canales aplicados y contexto CRM. El servidor arma sintéticos interpretables (contenido textual + datos estructurados) para que el asistente natural pueda razonar sin inventar cifras.
 
 ## Endpoints HTTP adicionales
 
@@ -80,6 +88,7 @@ Notas:
   - `PC_DEFAULT_CHANNELS`, `PC_HASHTAG_COUNT`, `PC_MOODBOARD_MAX`, `PC_KEYWORD_MAX`, `PC_MESSAGE_TEMPLATES`.
   - MongoDB: `MONGODB_URI`, `MONGODB_DB_NAME`, `PC_CONTENT_REQUESTS_COLLECTION`, `PC_CAMPAIGN_LOGS_COLLECTION`, `PC_IMAGES_COLLECTION`.
   - pgvector: `PGVECTOR_DSN`, `PGVECTOR_TABLE`, `PGVECTOR_DIM`.
+  - Postgres relacional para `queryCampaignPerformance`: `POSTGRES_DSN` (prioritario) o `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
 
 ## Persistencia y Seguridad
 - Inserciones en Mongo se realizan con el driver oficial; la entrada se valida con `zod`.
