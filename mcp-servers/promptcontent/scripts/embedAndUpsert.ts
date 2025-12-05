@@ -1,6 +1,6 @@
 import { MongoClient } from "mongodb"
-import { getPinecone, ensureIndex } from "../src/pinecone-util"
-import { generateEmbedding as sharedGenerateEmbedding } from "../src/embeddings"
+import { getPinecone, ensureIndex } from "../src/tools/getContent/pinecone-util"
+import { generateEmbedding as sharedGenerateEmbedding } from "../src/tools/getContent/embeddings"
 import dotenv from "dotenv"
 
 dotenv.config()

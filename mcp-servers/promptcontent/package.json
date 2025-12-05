@@ -3,13 +3,13 @@
     "version": "1.0.0",
     "description": "MCP server for PromptAds (Kubernetes deployment)",
     "type": "commonjs",
-    "main": "build/server.js",
+    "main": "build/index.js",
     "scripts": {
         "server:build": "tsc",
         "server:build:watch": "tsc --watch",
-        "server:dev": "tsx src/server.ts",
+        "server:dev": "tsx src/index.ts",
         "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:stdio",
-        "server:stdio": "node build/server.js",
+        "server:stdio": "node build/index.js",
         "db:seed": "tsx scripts/seedImages.ts",
         "db:embed": "tsx scripts/embedAndUpsert.ts",
         "pinecone:init": "tsx scripts/embedAndUpsert.ts --init-only"

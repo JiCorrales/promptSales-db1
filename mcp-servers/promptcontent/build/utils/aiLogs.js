@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.logAiRequest = logAiRequest;
 exports.logAiResponse = logAiResponse;
 const crypto_1 = require("crypto");
-const db_1 = require("./db");
+const db_1 = require("../db");
 /**
  * The function `normalizeLatency` takes a number as input, rounds it to the nearest integer, and
  * returns the result, or `null` if the input is not a valid number.

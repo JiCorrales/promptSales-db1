@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.aiDeriveFilters = aiDeriveFilters;
 exports.formatLargeNumber = formatLargeNumber;
 exports.formatPercent = formatPercent;
+exports.aiDeriveFilters = aiDeriveFilters;
 exports.getPostgresClient = getPostgresClient;
 exports.fetchCampaignRows = fetchCampaignRows;
 exports.fetchPromptAdsSnapshots = fetchPromptAdsSnapshots;
@@ -17,12 +17,14 @@ const openai_1 = __importDefault(require("openai"));
 const crypto_1 = require("crypto");
 const aiLogs_1 = require("./aiLogs");
 let pgClient = null;
+// Convierte un valor en un número si es posible, de lo contrario retorna null.
 function coerceNumber(value) {
     if (value === null || value === undefined)
         return null;
     const coerced = Number(value);
     return Number.isFinite(coerced) ? coerced : null;
 }
+// Normaliza un valor en un array de strings, eliminando espacios en blanco y filtrando valores vacíos.
 function normalizeStringArray(value) {
     if (!Array.isArray(value))
         return [];
@@ -30,6 +32,23 @@ function normalizeStringArray(value) {
         .filter((item) => typeof item === "string")
         .map(item => item.trim())
         .filter(Boolean);
+}
+function formatTimestamp(value) {
+    if (value === null || value === undefined)
+        return null;
+    if (value instanceof Date)
+        return value.toISOString();
+    if (typeof value === "string")
+        return value;
+    return null;
+}
+function formatLargeNumber(value) {
+    return value === null ? "n/d" : value.toLocaleString("es-ES");
+}
+function formatPercent(value) {
+    if (value === null)
+        return "n/d";
+    return `${(value * 100).toFixed(1)}%`;
 }
 async function aiDeriveFilters(question) {
     const key = process.env.OPENAI_API_KEY;
@@ -131,23 +150,7 @@ async function aiDeriveFilters(question) {
         return { campaignId: null, companyId: null };
     }
 }
-function formatTimestamp(value) {
-    if (value === null || value === undefined)
-        return null;
-    if (value instanceof Date)
-        return value.toISOString();
-    if (typeof value === "string")
-        return value;
-    return null;
-}
-function formatLargeNumber(value) {
-    return value === null ? "n/d" : value.toLocaleString("es-ES");
-}
-function formatPercent(value) {
-    if (value === null)
-        return "n/d";
-    return `${(value * 100).toFixed(1)}%`;
-}
+// Construye la configuración de conexión para PostgreSQL a partir de las variables de entorno.
 function buildConfig() {
     const connectionString = process.env.POSTGRES_DSN;
     if (connectionString)
@@ -177,6 +180,7 @@ function buildConfig() {
         password
     };
 }
+// Obtiene una instancia de cliente PostgreSQL conectada, reutilizando la conexión si ya existe.
 async function getPostgresClient() {
     if (pgClient)
         return pgClient;
@@ -186,7 +190,22 @@ async function getPostgresClient() {
     pgClient = client;
     return client;
 }
-// deriveFiltersFromQuestion eliminado en favor de aiDeriveFilters
+/**
+ * The function fetches campaign data based on specified filters and returns formatted rows.
+ * @param {Client} client - The `fetchCampaignRows` function is an asynchronous function that fetches
+ * campaign data from a database using the provided `client` object. The function takes three
+ * parameters:
+ * @param filters - The `fetchCampaignRows` function you provided is an asynchronous function that
+ * fetches campaign data based on the specified filters and limit. Here's a breakdown of the parameters
+ * and the SQL query being executed:
+ * @param {number} limit - The `fetchCampaignRows` function is an asynchronous function that fetches
+ * campaign data based on the provided filters and a limit. The function takes three parameters:
+ * @returns The `fetchCampaignRows` function returns an array of objects representing campaign data.
+ * Each object contains information such as campaign ID, name, status, description, budget amount,
+ * start and end dates, company ID and name, interaction metrics (clicks, likes, comments, reactions,
+ * shares, users reached), conversion rate, engagement rate, ROI, total spent, and calculated total
+ * revenue. The function filters
+ */
 async function fetchCampaignRows(client, filters, limit) {
     const { rows } = await client.query(`
         SELECT
@@ -251,6 +270,23 @@ async function fetchCampaignRows(client, filters, limit) {
     })
         .filter((entry) => entry !== null);
 }
+/**
+ * The function fetches aggregated data for prompt ads snapshots based on campaign IDs and returns the
+ * results in a map.
+ * @param {Client} client - The `client` parameter in the `fetchPromptAdsSnapshots` function is
+ * expected to be an instance of a database client that allows you to execute queries against a
+ * database. This client is used to perform a query to fetch data related to prompt ads snapshots for
+ * specific campaign IDs.
+ * @param {number[]} campaignIds - The `fetchPromptAdsSnapshots` function you provided is an
+ * asynchronous function that fetches snapshot data for prompt ads based on the provided campaign IDs.
+ * It executes a SQL query to aggregate data from the "PromptAdsSnapshots" table and then processes the
+ * results to create a map of campaign IDs to
+ * @returns The function `fetchPromptAdsSnapshots` returns a `Map<number, any>` containing data related
+ * to prompt ads snapshots for the specified campaign IDs. The data includes various metrics such as
+ * total reach, total impressions, total clicks, total interactions, total hours viewed, total cost,
+ * total revenue, campaign budget, company name, snapshot date, snapshot channels, and snapshot
+ * markets.
+ */
 async function fetchPromptAdsSnapshots(client, campaignIds) {
     if (campaignIds.length === 0)
         return new Map();
@@ -327,6 +363,20 @@ async function fetchPromptAdsSnapshots(client, campaignIds) {
     }
     return map;
 }
+/**
+ * The function fetches campaign channels from a database for the given campaign IDs and returns them
+ * in a map structure.
+ * @param {Client} client - The `client` parameter in the `fetchCampaignChannels` function is likely an
+ * instance of a database client that allows you to interact with a database. It is used to execute a
+ * query against the database to fetch campaign channels based on the provided `campaignIds`. The
+ * function retrieves channel names associated with the
+ * @param {number[]} campaignIds - The `campaignIds` parameter is an array of numbers representing the
+ * IDs of campaigns for which you want to fetch the associated channels. The function
+ * `fetchCampaignChannels` queries a database table named "CampaignChannels" to retrieve the channel
+ * names associated with the specified campaign IDs. It then returns a `Map
+ * @returns This function returns a Promise that resolves to a Map object, where the keys are campaign
+ * IDs (numbers) and the values are arrays of channel names (strings) associated with each campaign ID.
+ */
 async function fetchCampaignChannels(client, campaignIds) {
     if (campaignIds.length === 0)
         return new Map();
@@ -350,6 +400,21 @@ async function fetchCampaignChannels(client, campaignIds) {
     }
     return map;
 }
+/**
+ * The function fetches sales summaries for specified campaign IDs from a database and returns the
+ * results in a map.
+ * @param {Client} client - The `client` parameter in the `fetchSalesSummaries` function is expected to
+ * be an instance of a database client that allows you to execute queries against a database. This
+ * client is used to query the database for sales summary data based on the provided `campaignIds`.
+ * @param {number[]} campaignIds - The `campaignIds` parameter is an array of numbers representing the
+ * IDs of campaigns for which you want to fetch sales summaries. The function `fetchSalesSummaries`
+ * takes a `Client` object for database connection and an array of campaign IDs as input, queries the
+ * database for sales summaries related to those
+ * @returns The `fetchSalesSummaries` function returns a Promise that resolves to a Map object
+ * containing sales summaries for the specified campaign IDs. Each entry in the Map corresponds to a
+ * campaign ID and contains information such as orders, sales amount, returns amount, ads revenue, and
+ * currency ID.
+ */
 async function fetchSalesSummaries(client, campaignIds) {
     if (campaignIds.length === 0)
         return new Map();
@@ -381,6 +446,21 @@ async function fetchSalesSummaries(client, campaignIds) {
     }
     return map;
 }
+/**
+ * The function `fetchCrmInsights` retrieves CRM insights for specified campaign IDs from a database
+ * and returns summary and status maps.
+ * @param {Client} client - The `client` parameter in the `fetchCrmInsights` function is expected to be
+ * an instance of a database client that allows querying a database. This client is used to execute SQL
+ * queries against the database to fetch CRM insights for the specified campaign IDs.
+ * @param {number[]} campaignIds - The `fetchCrmInsights` function you provided is an asynchronous
+ * function that fetches CRM insights for a given client and an array of campaign IDs. It queries a
+ * database table named "PromptCrmSnapshots" to retrieve summary information and status counts for the
+ * specified campaign IDs.
+ * @returns The `fetchCrmInsights` function returns an object with two properties: `summaryMap` and
+ * `statusMap`. The `summaryMap` contains campaign insights such as total leads, conversion events, and
+ * channel names for each campaign ID. The `statusMap` contains lead status counts for each campaign
+ * ID.
+ */
 async function fetchCrmInsights(client, campaignIds) {
     if (campaignIds.length === 0) {
         return { summaryMap: new Map(), statusMap: new Map() };
